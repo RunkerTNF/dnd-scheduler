@@ -1,0 +1,170 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.dnd-theme {
+  --dnd-bg: #f5f0e6;
+  --dnd-ink: #3b2f2f;
+  --dnd-card: rgba(255, 248, 220, 0.92);
+  --dnd-border: #c2a878;
+  --dnd-ink-strong: #2b1b17;
+  --dnd-accent: #8b0000;
+  --dnd-btn-bg: #7b3f00;
+  --dnd-btn-border: #4b2e05;
+}
+
+.dnd-theme {
+  background-color: var(--dnd-bg);
+  background-image: url("/public/parchment-texture.png"); /* из public */
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+  color: var(--dnd-ink);
+  font-family: "IM Fell English", serif;
+}
+
+/* Заголовки только внутри темы */
+.dnd-theme h1,
+.dnd-theme h2,
+.dnd-theme h3,
+.dnd-theme h4,
+.dnd-theme h5,
+.dnd-theme h6 {
+  font-family: "IM Fell English SC", serif;
+  color: var(--dnd-ink-strong);
+}
+
+/* Опционально: утилиты темы (не конфликтуют с Tailwind) */
+.dnd-btn {
+  background-color: var(--dnd-btn-bg);
+  border: 2px solid var(--dnd-btn-border);
+  color: #f8f4e3;
+  padding: 0.45rem 0.8rem;
+  border-radius: 4px;
+  transition: background-color 0.2s ease, transform 0.08s ease;
+}
+.dnd-btn:hover {
+  background-color: #5c2f00;
+  transform: translateY(-1px);
+}
+.dnd-btn:active {
+  transform: none;
+}
+
+.dnd-card {
+  background: var(--dnd-card);
+  border: 1px solid var(--dnd-border);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+}
+
+/* Ссылки в теме */
+.dnd-theme a {
+  color: var(--dnd-accent);
+}
+.dnd-theme a:hover {
+  text-decoration: underline;
+}
+
+/* Формы внутри темы (без ломания Tailwind) */
+.dnd-theme input,
+.dnd-theme select,
+.dnd-theme textarea {
+  background: #fffaf0;
+  border: 1px solid var(--dnd-border);
+  border-radius: 4px;
+  padding: 0.45rem 0.6rem;
+  color: var(--dnd-ink-strong);
+}
+.dnd-theme input:focus,
+.dnd-theme select:focus,
+.dnd-theme textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(166, 124, 45, 0.25);
+}
+
+/* React Big Calendar — целиком под темой, чтобы не лезть глобально */
+.dnd-theme .rbc-calendar {
+  background-color: rgba(255, 255, 240, 0.9);
+  border: 2px solid var(--dnd-border);
+  border-radius: 6px;
+}
+.dnd-theme .rbc-toolbar {
+  font-family: "IM Fell English SC", serif;
+  background-color: rgba(255, 248, 220, 0.85);
+  border-bottom: 1px solid var(--dnd-border);
+}
+.dnd-theme .rbc-toolbar button {
+  background: #e5d6b8;
+  color: var(--dnd-ink-strong);
+  border: 1px solid var(--dnd-border);
+  padding: 0.35rem 0.6rem;
+  border-radius: 4px;
+}
+.dnd-theme .rbc-toolbar button:hover {
+  background: #dcc9a6;
+}
+.dnd-theme .rbc-toolbar .rbc-btn-group > button.rbc-active,
+.dnd-theme .rbc-toolbar .rbc-btn-group > button:active {
+  background: #cdb58b;
+  border-color: #a99067;
+}
+.dnd-theme .rbc-header {
+  background: rgba(233, 214, 178, 0.6);
+  border-bottom: 1px solid var(--dnd-border);
+  color: var(--dnd-ink-strong);
+  font-weight: 600;
+}
+.dnd-theme .rbc-today {
+  background-color: rgba(205, 181, 139, 0.25) !important;
+}
+.dnd-theme .rbc-time-content,
+.dnd-theme .rbc-month-view,
+.dnd-theme .rbc-agenda-view {
+  border-color: var(--dnd-border);
+}
+.dnd-theme .rbc-time-view .rbc-time-gutter,
+.dnd-theme .rbc-time-header,
+.dnd-theme .rbc-month-row,
+.dnd-theme .rbc-day-bg {
+  border-color: var(--dnd-border);
+}
+.dnd-theme .rbc-event {
+  border-radius: 6px;
+  border: 1px solid rgba(60, 40, 20, 0.45);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.12);
+  color: #1e1a17;
+  font-weight: 600;
+}
+.dnd-theme .rbc-event-label {
+  opacity: 0.85;
+}
+
+/* Карточка группы в списке */
+.dnd-group-card {
+  background: var(--dnd-card);
+  border: 2px solid var(--dnd-border);
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  cursor: pointer;
+}
+
+.dnd-group-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+/* Ссылки внутри темы */
+.dnd-theme a {
+  color: var(--dnd-accent);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.12s ease, text-shadow 0.12s ease;
+}
+
+.dnd-theme a:hover {
+  color: #a80000;
+  text-shadow: 0 0 3px rgba(168, 0, 0, 0.3);
+}

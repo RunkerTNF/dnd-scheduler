@@ -1,0 +1,247 @@
+/* ===== Modern DnD Theme (namespaced) ===== */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.dnd-theme {
+  /* Токены темы */
+  --bg: #f6f2e9; /* тёплый фон */
+  --ink: #2e2a25; /* основной текст */
+  --muted: #6b6259; /* вторичный */
+  --accent: #a33b2d; /* бордовый акцент */
+  --accent-2: #73543a; /* кожаный оттенок */
+  --card: #fffaf1; /* пергаментная карточка */
+  --border: #d9c7a6; /* тонкая рамка */
+  --ring: rgba(163, 59, 45, 0.2); /* фокус/подсветка */
+  --shadow: 0 6px 24px rgba(24, 16, 8, 0.14);
+
+  /* фон со слоем текстуры + градиент для глубины */
+  background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.35),
+      rgba(255, 255, 255, 0)
+    ),
+    url("/parchment-texture.jpg");
+  background-size: cover;
+  background-attachment: fixed;
+  color: var(--ink);
+  font-feature-settings: "liga" 1, "kern" 1;
+}
+
+/* Современная типографика с фэнтези-ноткой: заголовки — декоративный шрифт, текст — системный */
+@supports (font-variation-settings: normal) {
+  .dnd-theme {
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+      Inter, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji",
+      "Segoe UI Emoji";
+  }
+}
+.dnd-theme h1,
+.dnd-theme h2,
+.dnd-theme h3 {
+  font-family: "IM Fell English SC", Georgia, serif;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+
+/* ===== Универсальные UI-утилиты темы (не конфликтуют с Tailwind) ===== */
+
+/* Карточка */
+.dnd-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  backdrop-filter: saturate(110%) contrast(102%);
+}
+
+/* Кнопка: современная «кожа» без перегруза */
+.dnd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(180deg, #8c5a3a, #70452c);
+  color: #fffaf1;
+  border: 1px solid #5b3b25;
+  border-radius: 10px;
+  padding: 0.6rem 0.9rem;
+  box-shadow: 0 2px 0 #4c2f1d;
+  transition: transform 0.08s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+.dnd-btn:hover {
+  filter: brightness(1.06);
+}
+.dnd-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 #4c2f1d;
+}
+.dnd-btn--ghost {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--border);
+}
+.dnd-btn--danger {
+  background: linear-gradient(180deg, #b24435, #8d3228);
+  border-color: #6e261f;
+}
+
+/* Ссылки */
+.dnd-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+  position: relative;
+}
+.dnd-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.15;
+  transform: scaleX(0);
+  transition: transform 0.18s ease, opacity 0.18s ease;
+  transform-origin: left;
+}
+.dnd-link:hover::after {
+  transform: scaleX(1);
+  opacity: 0.35;
+}
+
+/* Поля ввода */
+.dnd-input {
+  background: #fffdf7;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+  color: var(--ink);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.dnd-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--ring);
+}
+
+/* ===== React Big Calendar — современный скин в теме ===== */
+.dnd-theme .rbc-calendar {
+  background: rgba(255, 255, 248, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.dnd-theme .rbc-toolbar {
+  padding: 0.6rem 0.8rem;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 250, 241, 0.9),
+    rgba(255, 250, 241, 0.6)
+  );
+  border-bottom: 1px solid var(--border);
+}
+.dnd-theme .rbc-toolbar button {
+  background: #f3ead7;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.35rem 0.6rem;
+  color: var(--ink);
+  transition: background-color 0.15s ease, transform 0.08s ease;
+}
+.dnd-theme .rbc-toolbar button:hover {
+  background: #efe2c6;
+}
+.dnd-theme .rbc-toolbar .rbc-btn-group > button.rbc-active {
+  background: #e6d4b3;
+  border-color: #cbb18a;
+}
+
+.dnd-theme .rbc-header {
+  background: rgba(235, 220, 190, 0.5);
+  border-bottom: 1px solid var(--border);
+  color: var(--ink);
+  font-weight: 600;
+}
+.dnd-theme .rbc-today {
+  background: rgba(205, 181, 139, 0.22) !important;
+}
+.dnd-theme .rbc-time-content,
+.dnd-theme .rbc-month-view,
+.dnd-theme .rbc-agenda-view {
+  border-color: var(--border);
+}
+.dnd-theme .rbc-time-view .rbc-time-gutter,
+.dnd-theme .rbc-time-header,
+.dnd-theme .rbc-month-row,
+.dnd-theme .rbc-day-bg {
+  border-color: var(--border);
+}
+
+.dnd-theme .rbc-event {
+  border-radius: 10px;
+  border: 1px solid rgba(40, 26, 16, 0.35);
+  color: #1e1713;
+  font-weight: 600;
+  padding: 2px 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.dnd-theme .rbc-event-label {
+  opacity: 0.85;
+}
+
+/* ===== Группы: карточка в списке ===== */
+.dnd-group-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1rem;
+  box-shadow: var(--shadow);
+  transition: transform 0.12s ease, box-shadow 0.12s ease,
+    border-color 0.12s ease;
+  will-change: transform;
+}
+.dnd-group-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(24, 16, 8, 0.18);
+  border-color: #cbb18a;
+}
+.dnd-group-card__title {
+  font-family: "IM Fell English SC", Georgia, serif;
+  font-size: 1.125rem;
+  color: var(--ink);
+}
+.dnd-group-card__meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* ===== Ночной режим (по желанию) ===== */
+@media (prefers-color-scheme: dark) {
+  .dnd-theme {
+    --bg: #161310;
+    --ink: #eae4da;
+    --muted: #b5aa9b;
+    --card: #1f1a15;
+    --border: #3a3026;
+    --accent: #d86858;
+    background: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.25),
+        rgba(0, 0, 0, 0.55)
+      ),
+      url("/parchment-texture.jpg");
+    color: var(--ink);
+  }
+  .dnd-theme .rbc-calendar {
+    background: rgba(28, 24, 20, 0.85);
+  }
+  .dnd-theme .rbc-header {
+    background: rgba(60, 50, 40, 0.5);
+  }
+  .dnd-theme .rbc-toolbar button {
+    background: #2a231c;
+    color: var(--ink);
+  }
+}
