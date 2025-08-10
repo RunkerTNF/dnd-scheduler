@@ -1,9 +1,15 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { prisma } from "./prisma";
 import Credentials from "next-auth/providers/credentials";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcrypt";
+import { z } from "zod";
+
+const credentialsSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+});
 
 export const authConfig = {
   adapter: PrismaAdapter(prisma),
@@ -12,24 +18,30 @@ export const authConfig = {
       clientId: process.env.AUTH_GOOGLE_ID!,
       clientSecret: process.env.AUTH_GOOGLE_SECRET!,
     }),
-    // Credentials({
-    //   name: "Email & Password",
-    //   credentials: {
-    //     email: { label: "Email", type: "text" },
-    //     password: { label: "Password", type: "password" },
-    //   },
-    //   async authorize(creds) {
-    //     if (!creds?.email || !creds?.password) return null;
-    //     const user = await prisma.user.findUnique({
-    //       where: { email: creds.email },
-    //     });
-    //     if (!user?.passwordHash) return null;
-    //     const ok = bcrypt.compare(creds.password, user.passwordHash);
-    //     return ok
-    //       ? { id: user.id, email: user.email, name: user.name ?? undefined }
-    //       : null;
-    //   },
-    // }),
+    Credentials({
+      name: "Email & Password",
+      authorize: async (raw) => {
+        const parsed = credentialsSchema.safeParse(raw);
+        if (!parsed.success) return null;
+        const { email, password } = parsed.data;
+
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user || !user.passwordHash) return null;
+
+        const ok = await bcrypt.compare(password, user.passwordHash);
+        if (!ok) return null;
+
+        // Возвращаем минимум полей
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name ?? null,
+          image: user.image ?? null,
+          isGM: user.isGM,
+        } as any;
+      },
+      credentials: { email: {}, password: {} },
+    }),
   ],
   session: { strategy: "jwt" },
   pages: { signIn: "/signin" },

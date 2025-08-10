@@ -32,6 +32,9 @@ type GroupDetails = {
 };
 
 export default function GroupPage({ params }: { params: { groupId: string } }) {
+  const [access, setAccess] = useState<"unknown" | "ok" | "forbidden">(
+    "unknown"
+  );
   const [av, setAv] = useState<Av[]>([]);
   const [tz, setTz] = useState<string>(
     Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -39,6 +42,7 @@ export default function GroupPage({ params }: { params: { groupId: string } }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [myId, setMyId] = useState<string | null>(null); // нужен для UI-подсветки/проверок
+  const [groupName, setGroupName] = useState<string>("");
   const router = useRouter();
 
   // Контролируем календарь (исправляет неработающие кнопки вида/навигации)
@@ -84,6 +88,7 @@ export default function GroupPage({ params }: { params: { groupId: string } }) {
             []
         );
         setInvites(g.invites ?? []);
+        setGroupName(g.name);
       });
 
     fetch("/api/auth/session")
@@ -107,12 +112,14 @@ export default function GroupPage({ params }: { params: { groupId: string } }) {
   // события для календаря: кладём id и userId в resource, чтобы потом удалять
   const events = useMemo(
     () =>
-      av.map((a) => ({
-        start: new Date(a.startTime),
-        end: new Date(a.endTime),
-        title: members.find((m) => m.id === a.userId)?.name || "Игрок",
-        resource: { id: a.id, userId: a.userId },
-      })),
+      Array.isArray(av)
+        ? av.map((a) => ({
+            start: new Date(a.startTime),
+            end: new Date(a.endTime),
+            title: members.find((m) => m.id === a.userId)?.name || "Игрок",
+            resource: { id: a.id, userId: a.userId },
+          }))
+        : [],
     [av, members]
   );
 
@@ -210,6 +217,29 @@ export default function GroupPage({ params }: { params: { groupId: string } }) {
     if (res.ok) router.push("/groups");
   };
 
+  async function kickUser(userId: string) {
+    if (!confirm("Исключить игрока из группы?")) return;
+    const r = await fetch(`/api/groups/${params.groupId}/members/${userId}`, {
+      method: "DELETE",
+    });
+    if (r.ok) {
+      setMembers((prev) => prev.filter((m) => m.id !== userId));
+      // и чистим его слоты из календаря
+      setAv((prev) => prev.filter((a) => a.userId !== userId));
+    } else if (r.status === 403) {
+      alert("Недостаточно прав.");
+    } else if (r.status === 400) {
+      const j = await r.json().catch(() => ({}));
+      alert(
+        j?.error === "cannot_kick_owner"
+          ? "Нельзя кикать владельца группы."
+          : "Не удалось исключить пользователя."
+      );
+    } else {
+      alert("Не удалось исключить пользователя.");
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Верхняя панель: назад, TZ, инвайт, назначить/удалить игру */}
@@ -217,6 +247,7 @@ export default function GroupPage({ params }: { params: { groupId: string } }) {
         <Link href="/groups" className="text-sm text-gray-600 hover:underline">
           ← Назад к списку групп
         </Link>
+        <h1 className="text-lg font-bold">{groupName || "Группа"}</h1>
         <div className="flex items-center gap-3">
           <select
             value={tz}
@@ -302,7 +333,7 @@ export default function GroupPage({ params }: { params: { groupId: string } }) {
             views={[Views.MONTH, Views.WEEK, Views.AGENDA]}
             date={date}
             onNavigate={(d) => setDate(d)}
-            defaultView="week"
+            defaultView="month"
             style={{ height: 640 }}
             eventPropGetter={(event) => {
               const uid = event?.resource?.userId as string | undefined;
@@ -336,6 +367,14 @@ export default function GroupPage({ params }: { params: { groupId: string } }) {
                       style={{ backgroundColor: colorForUser(m.id) }}
                     />
                     <span>{m.name || "Игрок"}</span>
+                    {canManage && m.id !== myId && (
+                      <button
+                        className="dnd-btn dnd-btn--danger"
+                        onClick={() => kickUser(m.id)}
+                      >
+                        Исключить
+                      </button>
+                    )}
                   </li>
                 ))
               ) : (

@@ -51,6 +51,16 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
 
 /***/ }),
 
+/***/ "(rsc)/./node_modules/next-auth/providers/credentials.js":
+/*!*********************************************************!*\
+  !*** ./node_modules/next-auth/providers/credentials.js ***!
+  \*********************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => (/* reexport safe */ _auth_core_providers_credentials__WEBPACK_IMPORTED_MODULE_0__[\"default\"])\n/* harmony export */ });\n/* harmony import */ var _auth_core_providers_credentials__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @auth/core/providers/credentials */ \"(rsc)/./node_modules/@auth/core/providers/credentials.js\");\n\n\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKHJzYykvLi9ub2RlX21vZHVsZXMvbmV4dC1hdXRoL3Byb3ZpZGVycy9jcmVkZW50aWFscy5qcyIsIm1hcHBpbmdzIjoiOzs7OztBQUFpRDtBQUNVIiwic291cmNlcyI6WyJ3ZWJwYWNrOi8vZG5kLXNjaGVkdWxlci8uL25vZGVfbW9kdWxlcy9uZXh0LWF1dGgvcHJvdmlkZXJzL2NyZWRlbnRpYWxzLmpzPzVlN2EiXSwic291cmNlc0NvbnRlbnQiOlsiZXhwb3J0ICogZnJvbSBcIkBhdXRoL2NvcmUvcHJvdmlkZXJzL2NyZWRlbnRpYWxzXCI7XG5leHBvcnQgeyBkZWZhdWx0IH0gZnJvbSBcIkBhdXRoL2NvcmUvcHJvdmlkZXJzL2NyZWRlbnRpYWxzXCI7XG4iXSwibmFtZXMiOltdLCJzb3VyY2VSb290IjoiIn0=\n//# sourceURL=webpack-internal:///(rsc)/./node_modules/next-auth/providers/credentials.js\n");
+
+/***/ }),
+
 /***/ "(rsc)/./node_modules/next-auth/providers/google.js":
 /*!****************************************************!*\
   !*** ./node_modules/next-auth/providers/google.js ***!

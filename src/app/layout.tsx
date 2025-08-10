@@ -19,12 +19,17 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-gray-50 text-gray-900 dnd-theme">
-        <header className="border-b bg-white ">
+        <header className="border-b bg-green dnd-header">
           <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between">
             <Link href="/" className="font-semibold">
               DnD Scheduler
             </Link>
             <nav className="flex items-center gap-3">
+              {session?.user && (
+                <div className="flex items-center gap-3">
+                  <span className="italic">{session.user.name}</span>
+                </div>
+              )}
               {session?.user ? (
                 <>
                   <Link href="/groups" className="text-sm">
@@ -36,7 +41,7 @@ export default async function RootLayout({
                       await signOut();
                     }}
                   >
-                    <button className="text-sm">Выйти</button>
+                    <button className="text-sm dnd-btn">Выйти</button>
                   </form>
                 </>
               ) : (
