@@ -9,6 +9,9 @@ export default function Home() {
       <p className="text-black-600">
         Игроки отмечают когда свободны. Ты видишь пересечения и назначаешь дату.
       </p>
+      <Link href="/signin" className="inline-block rounded px-4 py-2">
+        Войти в аккаунт
+      </Link>
       <Link href="/groups" className="inline-block rounded px-4 py-2">
         Перейти к группам
       </Link>
