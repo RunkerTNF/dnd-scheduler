@@ -8,6 +8,7 @@ services:
     env_file:
       - ../.env
     environment:
+      # DATABASE_URL из .env будет использован, если задан. Иначе можно задать POSTGRES_* переменные
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://app:app@db:5432/dnd}
     ports:
       - "8000:8000"
@@ -19,22 +20,26 @@ services:
   db:
     image: postgres:15
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
-      POSTGRES_DB: dnd
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-dnd}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d dnd"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-dnd}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   db-backup:
     image: postgres:15
+    env_file:
+      - ../.env
     depends_on:
       db:
         condition: service_healthy
@@ -57,11 +62,13 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4
+    env_file:
+      - ../.env
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
     ports:
-      - "5050:80"
+      - "${PGADMIN_PORT:-5050}:80"
     depends_on:
       db:
         condition: service_healthy
