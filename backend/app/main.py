@@ -3,8 +3,8 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config import get_settings
-from .routers import groups, join, users
+from app.config import get_settings
+from app.routers import auth, groups, join, users
 
 
 settings = get_settings()
@@ -19,6 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(groups.router)
 app.include_router(join.router)
 app.include_router(users.router)

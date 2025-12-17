@@ -5,9 +5,9 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from .. import models, schemas
-from ..auth import get_or_create_user
-from ..database import get_db
+from app import models, schemas
+from app.auth import get_current_user
+from app.database import get_db
 
 router = APIRouter(prefix="/join", tags=["invites"])
 
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/join", tags=["invites"])
 @router.post("/", response_model=schemas.JoinResponseSchema)
 def accept_invite(
     payload: schemas.JoinRequestSchema,
-    current_user: models.User = Depends(get_or_create_user),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> schemas.JoinResponseSchema:
     token = payload.token.strip()

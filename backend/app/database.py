@@ -27,7 +27,7 @@ def _normalize_database_url(url: str) -> str:
 
     return url
 
-from .config import get_settings
+from app.config import get_settings
 
 settings = get_settings()
 engine = create_engine(_normalize_database_url(settings.database_url), pool_pre_ping=True)
