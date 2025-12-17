@@ -1,3 +1,21 @@
-node_modules
+# Environment
 .env
-.next
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Tooling caches
+.cache/
+.mypy_cache/
+.pytest_cache/
+
+# Node artifacts (legacy)
+node_modules/
+.next/
+backups/
