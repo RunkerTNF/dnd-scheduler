@@ -1,4 +1,21 @@
+version: "3.9"
+
 services:
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://app:app@db:5432/dnd}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
   db:
     image: postgres:15
     restart: unless-stopped
@@ -6,14 +23,48 @@ services:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
       POSTGRES_DB: dnd
-    ports: ["5432:5432"]
-    volumes: ["pgdata:/var/lib/postgresql/data"]
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d dnd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db-backup:
+    image: postgres:15
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST:-db}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-dnd}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-86400}
+    volumes:
+      - ../backups:/backups
+    entrypoint: ["/bin/bash", "-c"]
+    command: >
+      "mkdir -p /backups &&
+      while true; do
+        ts=$(date +%Y%m%d%H%M%S);
+        PGPASSWORD=$${POSTGRES_PASSWORD} pg_dump -h $${POSTGRES_HOST} -U $${POSTGRES_USER} -d $${POSTGRES_DB} -Fc -f /backups/db_$${ts}.dump;
+        sleep $${BACKUP_INTERVAL};
+      done"
+
   pgadmin:
     image: dpage/pgadmin4
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin
-    ports: ["5050:80"]
-    depends_on: [db]
+    ports:
+      - "5050:80"
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   pgdata:
