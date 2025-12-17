@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -25,6 +26,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
+
+
+def get_token_hash(token: str) -> str:
+    """Generate a hash of the token for blacklist storage."""
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
 def create_access_token(*, user: models.User, settings: Settings) -> str:
@@ -58,6 +64,17 @@ def get_current_user(
         detail="unauthorized",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    # Check if token is blacklisted
+    token_hash = get_token_hash(token)
+    blacklisted = (
+        db.query(models.BlacklistedToken)
+        .filter(models.BlacklistedToken.tokenHash == token_hash)
+        .one_or_none()
+    )
+    if blacklisted is not None:
+        raise credentials_exception
+    
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         user_id: str | None = payload.get("userId")

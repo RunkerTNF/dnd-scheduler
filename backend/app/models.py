@@ -83,3 +83,12 @@ class Event(Base):
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     group: Mapped[Group] = relationship(back_populates="events")
+
+
+class BlacklistedToken(Base):
+    __tablename__ = "BlacklistedToken"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
+    tokenHash: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
+    expiresAt: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)

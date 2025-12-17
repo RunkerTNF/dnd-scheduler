@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, selectinload
 
 from app import models, schemas
@@ -68,12 +68,12 @@ def get_group(
     return group
 
 
-@router.delete("/{group_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
+@router.delete("/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_group(
     group_id: str,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> None:
+):
     group = db.query(models.Group).filter(models.Group.id == group_id).one_or_none()
     if group is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found")

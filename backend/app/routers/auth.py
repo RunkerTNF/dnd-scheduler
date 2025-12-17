@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app import models, schemas
@@ -11,10 +13,13 @@ from app.auth import (
     create_access_token,
     get_current_user,
     get_password_hash,
+    get_token_hash,
     verify_google_identity_token,
 )
 from app.config import Settings, get_settings
 from app.database import get_db
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -81,7 +86,38 @@ def login_with_google(
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(_: models.User = Depends(get_current_user)) -> Response:
-    """Stateless logout – clients should discard the issued bearer token."""
-
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+def logout(
+    request: Request,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+):
+    """Add token to blacklist to invalidate it."""
+    # Get token from Authorization header
+    authorization = request.headers.get("Authorization")
+    if not authorization or not authorization.startswith("Bearer "):
+        return
+    
+    token = authorization.replace("Bearer ", "")
+    
+    # Decode token to get expiration time
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        exp_timestamp = payload.get("exp")
+        if exp_timestamp:
+            expires_at = datetime.utcfromtimestamp(exp_timestamp)
+        else:
+            # If no expiration, set it to 24 hours from now (default token expiry)
+            expires_at = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+    except JWTError:
+        # If token is invalid, we can still blacklist it
+        expires_at = datetime.utcnow() + timedelta(days=1)
+    
+    # Add token to blacklist
+    token_hash = get_token_hash(token)
+    blacklisted_token = models.BlacklistedToken(
+        tokenHash=token_hash,
+        expiresAt=expires_at,
+    )
+    db.add(blacklisted_token)
+    db.commit()
