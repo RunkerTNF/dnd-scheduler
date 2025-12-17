@@ -3,9 +3,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, selectinload
 
-from .. import models, schemas
-from ..auth import get_current_user
-from ..database import get_db
+from app import models, schemas
+from app.auth import get_current_user
+from app.database import get_db
 
 router = APIRouter(prefix="/users", tags=["users"])
 

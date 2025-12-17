@@ -1,65 +1,102 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Optional
-from uuid import uuid4
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
-from . import models
-from .database import get_db
+from app import models
+from app.config import Settings, get_settings
+from app.database import get_db
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
-@dataclass
-class AuthenticatedIdentity:
-    email: str
-    user_id: Optional[str] = None
-    name: Optional[str] = None
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
 
 
-async def get_identity(
-    x_user_email: str | None = Header(default=None, alias="X-User-Email"),
-    x_user_id: str | None = Header(default=None, alias="X-User-Id"),
-    x_user_name: str | None = Header(default=None, alias="X-User-Name"),
-) -> AuthenticatedIdentity:
-    if not x_user_email:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="unauthorized")
-    return AuthenticatedIdentity(email=x_user_email, user_id=x_user_id, name=x_user_name)
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def create_access_token(*, user: models.User, settings: Settings) -> str:
+    """Issue a JWT with an explicit ``userId`` claim for clarity."""
+
+    expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+    to_encode = {
+        "userId": user.id,
+        "email": user.email,
+        "exp": expire,
+    }
+    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+
+
+def authenticate_user(db: Session, email: str, password: str) -> Optional[models.User]:
+    user = db.query(models.User).filter(models.User.email == email).one_or_none()
+    if user is None or not user.passwordHash:
+        return None
+    if not verify_password(password, user.passwordHash):
+        return None
+    return user
 
 
 def get_current_user(
-    identity: AuthenticatedIdentity = Depends(get_identity),
+    token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> models.User:
-    user = (
-        db.query(models.User)
-        .filter(models.User.email == identity.email)
-        .one_or_none()
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="unauthorized",
+        headers={"WWW-Authenticate": "Bearer"},
     )
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        user_id: str | None = payload.get("userId")
+    except JWTError:
+        raise credentials_exception
+    if user_id is None:
+        raise credentials_exception
+
+    user = db.query(models.User).filter(models.User.id == user_id).one_or_none()
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="unauthorized")
+        raise credentials_exception
+
     return user
 
 
-def get_or_create_user(
-    identity: AuthenticatedIdentity = Depends(get_identity),
-    db: Session = Depends(get_db),
-) -> models.User:
-    user = (
-        db.query(models.User)
-        .filter(models.User.email == identity.email)
-        .one_or_none()
-    )
-    if user is not None:
-        return user
-    # Create new user
-    user = models.User(
-        id=identity.user_id or str(uuid4()),
-        email=identity.email,
-        name=identity.name,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
+def verify_google_identity_token(id_token_value: str, settings: Settings) -> dict[str, object]:
+    if not settings.google_client_id:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="google_auth_not_configured",
+        )
+
+    try:
+        token_info = id_token.verify_oauth2_token(
+            id_token_value,
+            google_requests.Request(),
+            settings.google_client_id,
+        )
+    except ValueError as exc:  # token invalid or expired
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_google_token",
+        ) from exc
+
+    email = token_info.get("email")
+    if not email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="google_email_missing")
+
+    if not token_info.get("email_verified", False):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="email_not_verified")
+
+    return token_info

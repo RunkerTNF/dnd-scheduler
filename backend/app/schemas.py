@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 
 
 class InviteSchema(BaseModel):
@@ -114,3 +114,27 @@ class UserSchema(BaseModel):
     model_config = {
         "from_attributes": True,
     }
+
+
+class RegisterRequestSchema(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8)
+    name: Optional[str] = None
+
+
+class LoginRequestSchema(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class GoogleAuthRequestSchema(BaseModel):
+    idToken: str = Field(min_length=1)
+
+
+class TokenSchema(BaseModel):
+    accessToken: str
+    tokenType: str = "bearer"
+
+
+class AuthResponseSchema(TokenSchema):
+    user: UserSchema

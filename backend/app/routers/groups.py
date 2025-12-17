@@ -3,9 +3,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, selectinload
 
-from .. import models, schemas
-from ..auth import get_current_user, get_or_create_user
-from ..database import get_db
+from app import models, schemas
+from app.auth import get_current_user
+from app.database import get_db
 
 router = APIRouter(prefix="/groups", tags=["groups"])
 
@@ -28,7 +28,7 @@ def list_groups(
 @router.post("/", response_model=schemas.GroupBaseSchema, status_code=status.HTTP_201_CREATED)
 def create_group(
     payload: schemas.GroupCreateSchema,
-    current_user: models.User = Depends(get_or_create_user),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> models.Group:
     group = models.Group(
