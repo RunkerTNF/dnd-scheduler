@@ -12,7 +12,7 @@ Backend сервис для планирования Dungeons & Dragons сесс
 ### Вариант 1: Docker Compose (бекенд + база)
 1. Создайте файл `.env` в корне проекта (его подхватит backend-контейнер):
    ```env
-   DATABASE_URL="postgresql://app:app@db:5432/dnd"
+   DATABASE_URL="postgresql+psycopg://app:app@db:5432/dnd"
    CORS_ORIGINS=["http://localhost:3000"]
    ```
 2. Соберите и запустите сервисы:
@@ -44,7 +44,7 @@ Backend сервис для планирования Dungeons & Dragons сесс
    ```
 3. Создайте файл `.env` в корне проекта:
    ```env
-   DATABASE_URL="postgresql://app:app@localhost:5432/dnd"
+   DATABASE_URL="postgresql+psycopg://app:app@localhost:5432/dnd"
    CORS_ORIGINS=["http://localhost:3000"]
    ```
 4. Примените стартовую миграцию:
@@ -64,7 +64,7 @@ Backend сервис для планирования Dungeons & Dragons сесс
 
 - **Управляемая БД:** создайте PostgreSQL в облаке и передайте строку подключения через `DATABASE_URL` в `.env`, затем поднимите только backend:
   ```bash
-  DATABASE_URL="postgresql://user:password@your-managed-host:5432/dbname?sslmode=require"
+  DATABASE_URL="postgresql+psycopg://user:password@your-managed-host:5432/dbname?sslmode=require"
   docker compose -f .docker/docker-compose.prod.yml up --build -d
   ```
   В продакшене проще отключить pgAdmin и локальный Postgres: они отсутствуют в `docker-compose.prod.yml`.
