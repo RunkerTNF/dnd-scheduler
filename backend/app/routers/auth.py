@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.security import OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
@@ -18,8 +18,6 @@ from app.auth import (
 )
 from app.config import Settings, get_settings
 from app.database import get_db
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -53,12 +51,32 @@ def login(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> schemas.AuthResponseSchema:
+    """Login with JSON body (for API clients)."""
     user = authenticate_user(db, payload.email, payload.password)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_credentials")
 
     token = create_access_token(user=user, settings=settings)
     return schemas.AuthResponseSchema(accessToken=token, tokenType="bearer", user=user)
+
+
+@router.post("/token", response_model=schemas.OAuth2TokenSchema)
+def login_for_swagger(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> schemas.OAuth2TokenSchema:
+    """
+    OAuth2 compatible token login (for Swagger UI).
+    
+    Use email as username. client_id and client_secret are not required.
+    """
+    user = authenticate_user(db, form_data.username, form_data.password)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_credentials")
+
+    token = create_access_token(user=user, settings=settings)
+    return schemas.OAuth2TokenSchema(access_token=token, token_type="bearer")
 
 
 @router.post("/google", response_model=schemas.AuthResponseSchema)
@@ -75,7 +93,7 @@ def login_with_google(
             email=email,
             name=token_info.get("name"),
             image=token_info.get("picture"),
-            emailVerified=datetime.utcnow(),
+            emailVerified=datetime.now(timezone.utc),
         )
         db.add(user)
         db.commit()
@@ -98,23 +116,30 @@ def logout(
     if not authorization or not authorization.startswith("Bearer "):
         return
     
-    token = authorization.replace("Bearer ", "")
+    token = authorization.removeprefix("Bearer ")
+    token_hash = get_token_hash(token)
+    
+    # Check if token is already blacklisted
+    existing = (
+        db.query(models.BlacklistedToken)
+        .filter(models.BlacklistedToken.tokenHash == token_hash)
+        .one_or_none()
+    )
+    if existing is not None:
+        return  # Already blacklisted, nothing to do
     
     # Decode token to get expiration time
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         exp_timestamp = payload.get("exp")
         if exp_timestamp:
-            expires_at = datetime.utcfromtimestamp(exp_timestamp)
+            expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
         else:
-            # If no expiration, set it to 24 hours from now (default token expiry)
-            expires_at = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+            expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
     except JWTError:
-        # If token is invalid, we can still blacklist it
-        expires_at = datetime.utcnow() + timedelta(days=1)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=1)
     
     # Add token to blacklist
-    token_hash = get_token_hash(token)
     blacklisted_token = models.BlacklistedToken(
         tokenHash=token_hash,
         expiresAt=expires_at,

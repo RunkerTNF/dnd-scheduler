@@ -136,5 +136,11 @@ class TokenSchema(BaseModel):
     tokenType: str = "bearer"
 
 
+class OAuth2TokenSchema(BaseModel):
+    """OAuth2 compatible token response (for Swagger UI)."""
+    access_token: str
+    token_type: str = "bearer"
+
+
 class AuthResponseSchema(TokenSchema):
     user: UserSchema

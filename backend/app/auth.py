@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status
@@ -17,7 +17,18 @@ from app.config import Settings, get_settings
 from app.database import get_db
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+
+# Lazy-initialized dummy hash for timing attack prevention
+_dummy_hash_cache: str | None = None
+
+
+def _get_dummy_hash() -> str:
+    """Lazily initialize dummy hash to avoid import-time errors."""
+    global _dummy_hash_cache
+    if _dummy_hash_cache is None:
+        _dummy_hash_cache = pwd_context.hash("dummy_password_for_timing")
+    return _dummy_hash_cache
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -36,7 +47,7 @@ def get_token_hash(token: str) -> str:
 def create_access_token(*, user: models.User, settings: Settings) -> str:
     """Issue a JWT with an explicit ``userId`` claim for clarity."""
 
-    expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
     to_encode = {
         "userId": user.id,
         "email": user.email,
@@ -48,6 +59,8 @@ def create_access_token(*, user: models.User, settings: Settings) -> str:
 def authenticate_user(db: Session, email: str, password: str) -> Optional[models.User]:
     user = db.query(models.User).filter(models.User.email == email).one_or_none()
     if user is None or not user.passwordHash:
+        # Prevent timing attack: always verify against dummy hash
+        verify_password(password, _get_dummy_hash())
         return None
     if not verify_password(password, user.passwordHash):
         return None
@@ -65,7 +78,16 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    # Check if token is blacklisted
+    # First, decode JWT (no DB call, fast validation)
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        user_id: str | None = payload.get("userId")
+    except JWTError:
+        raise credentials_exception
+    if user_id is None:
+        raise credentials_exception
+
+    # Check if token is blacklisted (only after JWT is valid)
     token_hash = get_token_hash(token)
     blacklisted = (
         db.query(models.BlacklistedToken)
@@ -73,14 +95,6 @@ def get_current_user(
         .one_or_none()
     )
     if blacklisted is not None:
-        raise credentials_exception
-    
-    try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
-        user_id: str | None = payload.get("userId")
-    except JWTError:
-        raise credentials_exception
-    if user_id is None:
         raise credentials_exception
 
     user = db.query(models.User).filter(models.User.id == user_id).one_or_none()

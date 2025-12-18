@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -11,9 +12,11 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 24
     google_client_id: str | None = None
 
-    class Config:
-        env_file = Path(__file__).resolve().parents[2] / ".env"
-        env_file_encoding = "utf-8"
+    model_config = ConfigDict(
+        env_file=Path(__file__).resolve().parents[2] / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",  # Игнорировать дополнительные переменные из .env (например, POSTGRES_*, PGADMIN_*)
+    )
 
 
 def get_settings() -> Settings:
