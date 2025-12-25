@@ -82,6 +82,11 @@ class GroupCreateSchema(BaseModel):
     description: Optional[str] = None
 
 
+class InviteCreateSchema(BaseModel):
+    expiresAt: Optional[datetime] = None
+    usesLeft: Optional[int] = Field(default=None, ge=1)
+
+
 class JoinRequestSchema(BaseModel):
     token: str
 

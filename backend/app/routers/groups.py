@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, selectinload
 
@@ -80,4 +82,79 @@ def delete_group(
     if group.ownerId != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
     db.delete(group)
+    db.commit()
+
+
+@router.get("/{group_id}/invites", response_model=list[schemas.InviteSchema])
+def list_invites(
+    group_id: str,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[models.Invite]:
+    """List all invites for a group. Only the group owner can view invites."""
+    group = db.query(models.Group).filter(models.Group.id == group_id).one_or_none()
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found")
+    if group.ownerId != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
+    invites = (
+        db.query(models.Invite)
+        .filter(models.Invite.groupId == group_id)
+        .order_by(models.Invite.createdAt.desc())
+        .all()
+    )
+    return invites
+
+
+@router.post("/{group_id}/invites", response_model=schemas.InviteSchema, status_code=status.HTTP_201_CREATED)
+def create_invite(
+    group_id: str,
+    payload: schemas.InviteCreateSchema,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> models.Invite:
+    """Create an invite for a group. Only the group owner can create invites."""
+    group = db.query(models.Group).filter(models.Group.id == group_id).one_or_none()
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found")
+    if group.ownerId != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
+
+    token = secrets.token_urlsafe(16)
+    invite = models.Invite(
+        groupId=group_id,
+        token=token,
+        expiresAt=payload.expiresAt,
+        usesLeft=payload.usesLeft,
+        createdBy=current_user.id,
+    )
+    db.add(invite)
+    db.commit()
+    db.refresh(invite)
+    return invite
+
+
+@router.delete("/{group_id}/invites/{invite_id}", status_code=status.HTTP_204_NO_CONTENT)
+def cancel_invite(
+    group_id: str,
+    invite_id: str,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Cancel/delete an invite. Only the group owner can cancel invites."""
+    group = db.query(models.Group).filter(models.Group.id == group_id).one_or_none()
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found")
+    if group.ownerId != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
+
+    invite = (
+        db.query(models.Invite)
+        .filter(models.Invite.id == invite_id, models.Invite.groupId == group_id)
+        .one_or_none()
+    )
+    if invite is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="invite_not_found")
+
+    db.delete(invite)
     db.commit()
