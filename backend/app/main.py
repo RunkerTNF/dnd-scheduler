@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import auth, groups, join, users
+from app.routers import auth, groups, join, users, availability, events
 
 
 settings = get_settings()
@@ -23,6 +23,8 @@ app.include_router(auth.router)
 app.include_router(groups.router)
 app.include_router(join.router)
 app.include_router(users.router)
+app.include_router(availability.router)
+app.include_router(events.router)
 
 
 @app.get("/health")

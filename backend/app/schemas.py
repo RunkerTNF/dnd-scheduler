@@ -149,3 +149,50 @@ class OAuth2TokenSchema(BaseModel):
 
 class AuthResponseSchema(TokenSchema):
     user: UserSchema
+
+
+# Availability schemas
+class AvailabilityCreateSchema(BaseModel):
+    startDateTime: datetime
+    endDateTime: datetime
+    notes: Optional[str] = None
+
+
+class AvailabilityUpdateSchema(BaseModel):
+    startDateTime: Optional[datetime] = None
+    endDateTime: Optional[datetime] = None
+    notes: Optional[str] = None
+
+
+class AvailabilitySchema(BaseModel):
+    id: str
+    userId: str
+    groupId: str
+    startDateTime: datetime
+    endDateTime: datetime
+    notes: Optional[str]
+    createdAt: datetime
+    updatedAt: datetime
+
+    model_config = {
+        "from_attributes": True,
+    }
+
+
+class AvailabilityWithUserSchema(AvailabilitySchema):
+    user: MembershipUserSchema
+
+
+# Event CRUD schemas
+class EventCreateSchema(BaseModel):
+    scheduledAt: datetime
+    durationMinutes: int = Field(ge=30, le=720)
+    title: str
+    notes: Optional[str] = None
+
+
+class EventUpdateSchema(BaseModel):
+    scheduledAt: Optional[datetime] = None
+    durationMinutes: Optional[int] = Field(default=None, ge=30, le=720)
+    title: Optional[str] = None
+    notes: Optional[str] = None

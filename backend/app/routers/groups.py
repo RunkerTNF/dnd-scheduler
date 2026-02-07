@@ -158,3 +158,43 @@ def cancel_invite(
 
     db.delete(invite)
     db.commit()
+
+
+@router.delete("/{group_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_member(
+    group_id: str,
+    user_id: str,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Remove a member from a group. Only the group owner can remove members.
+
+    The group owner cannot be removed.
+    """
+    # Verify group exists and user is owner
+    group = db.query(models.Group).filter(models.Group.id == group_id).one_or_none()
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found")
+    if group.ownerId != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
+
+    # Prevent removing the owner
+    if user_id == group.ownerId:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="cannot_remove_owner"
+        )
+
+    # Get membership
+    membership = (
+        db.query(models.Membership)
+        .filter(models.Membership.userId == user_id, models.Membership.groupId == group_id)
+        .one_or_none()
+    )
+
+    if membership is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="member_not_found")
+
+    # Delete membership (cascades will clean up availability)
+    db.delete(membership)
+    db.commit()

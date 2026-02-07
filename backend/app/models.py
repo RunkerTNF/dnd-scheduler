@@ -42,6 +42,7 @@ class Group(Base):
     memberships: Mapped[list["Membership"]] = relationship(back_populates="group", cascade="all, delete-orphan")
     invites: Mapped[list["Invite"]] = relationship(back_populates="group", cascade="all, delete-orphan")
     events: Mapped[list["Event"]] = relationship(back_populates="group", cascade="all, delete-orphan")
+    availabilities: Mapped[list["Availability"]] = relationship(back_populates="group", cascade="all, delete-orphan")
 
 
 class Membership(Base):
@@ -83,6 +84,24 @@ class Event(Base):
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     group: Mapped[Group] = relationship(back_populates="events")
+
+
+class Availability(Base):
+    __tablename__ = "Availability"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
+    userId: Mapped[str] = mapped_column(String, ForeignKey("User.id", ondelete="CASCADE"), nullable=False)
+    groupId: Mapped[str] = mapped_column(String, ForeignKey("Group.id", ondelete="CASCADE"), nullable=False)
+    startDateTime: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    endDateTime: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updatedAt: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    user: Mapped[User] = relationship()
+    group: Mapped[Group] = relationship(back_populates="availabilities")
 
 
 class BlacklistedToken(Base):
