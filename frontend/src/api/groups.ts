@@ -1,19 +1,19 @@
-import apiClient from './client';
+import apiClient from "./client";
 import type {
   GroupCreateRequest,
   InviteCreateRequest,
   JoinRequest,
   JoinResponse,
-} from '../types/api';
-import type { GroupBase, GroupDetail, Invite } from '../types/models';
+} from "../types/api";
+import type { GroupBase, GroupDetail, Invite } from "../types/models";
 
 export const groupsApi = {
-  list: () => apiClient.get<GroupBase[]>('/groups'),
+  list: () => apiClient.get<GroupBase[]>("/groups/"),
 
   get: (id: string) => apiClient.get<GroupDetail>(`/groups/${id}`),
 
   create: (data: GroupCreateRequest) =>
-    apiClient.post<GroupBase>('/groups', data),
+    apiClient.post<GroupBase>("/groups/", data),
 
   delete: (id: string) => apiClient.delete(`/groups/${id}`),
 
@@ -33,6 +33,5 @@ export const groupsApi = {
 };
 
 export const joinApi = {
-  join: (data: JoinRequest) =>
-    apiClient.post<JoinResponse>('/join', data),
+  join: (data: JoinRequest) => apiClient.post<JoinResponse>("/join/", data),
 };
