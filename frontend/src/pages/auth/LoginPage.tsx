@@ -1,8 +1,12 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import LoginForm from '../../components/auth/LoginForm';
 import GoogleLoginButton from '../../components/auth/GoogleLoginButton';
 
 export default function LoginPage() {
+  const [searchParams] = useSearchParams();
+  const redirect = searchParams.get('redirect');
+  const registerLink = redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : '/register';
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100 px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
@@ -33,7 +37,7 @@ export default function LoginPage() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
             Нет аккаунта?{' '}
-            <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+            <Link to={registerLink} className="font-medium text-indigo-600 hover:text-indigo-500">
               Зарегистрироваться
             </Link>
           </p>

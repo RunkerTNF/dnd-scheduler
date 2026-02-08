@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authApi } from '../../api/auth';
 import { useAuthStore } from '../../store/authStore';
 import Button from '../ui/Button';
 
 export default function GoogleLoginButton() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,7 +16,8 @@ export default function GoogleLoginButton() {
     mutationFn: authApi.googleAuth,
     onSuccess: (response) => {
       setAuth(response.data.user, response.data.accessToken);
-      navigate('/groups');
+      const redirectTo = searchParams.get('redirect') || '/groups';
+      navigate(redirectTo);
     },
     onError: (err: any) => {
       setError(err.response?.data?.detail || 'Ошибка авторизации через Google');

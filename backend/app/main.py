@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -22,12 +22,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router)
-app.include_router(groups.router)
-app.include_router(join.router)
-app.include_router(users.router)
-app.include_router(availability.router)
-app.include_router(events.router)
+# API v1 router with /api prefix
+api_router = APIRouter(prefix="/api")
+api_router.include_router(auth.router)
+api_router.include_router(groups.router)
+api_router.include_router(join.router)
+api_router.include_router(users.router)
+api_router.include_router(availability.router)
+api_router.include_router(events.router)
+
+app.include_router(api_router)
 
 uploads_dir = Path(__file__).resolve().parents[1] / "uploads"
 uploads_dir.mkdir(exist_ok=True)

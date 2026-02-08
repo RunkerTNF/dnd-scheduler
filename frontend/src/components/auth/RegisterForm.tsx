@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authApi } from '../../api/auth';
 import { useAuthStore } from '../../store/authStore';
 import Input from '../ui/Input';
@@ -23,6 +23,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterForm() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -38,7 +39,8 @@ export default function RegisterForm() {
     mutationFn: authApi.register,
     onSuccess: (response) => {
       setAuth(response.data.user, response.data.accessToken);
-      navigate('/groups');
+      const redirectTo = searchParams.get('redirect') || '/groups';
+      navigate(redirectTo);
     },
     onError: (error: any) => {
       setServerError(error.response?.data?.detail || 'Не удалось зарегистрироваться');
