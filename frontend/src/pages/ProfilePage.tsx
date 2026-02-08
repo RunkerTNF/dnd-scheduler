@@ -1,29 +1,39 @@
-import { useState, useRef } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useMutation } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
-import { usersApi } from '../api/users';
-import Input from '../components/ui/Input';
-import Button from '../components/ui/Button';
-import { ArrowLeftIcon, UserCircleIcon, PhotoIcon } from '@heroicons/react/24/outline';
-import { resolveImageUrl } from '../utils/imageUrl';
+import { useState, useRef } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useMutation } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { useAuthStore } from "../store/authStore";
+import { usersApi } from "../api/users";
+import Input from "../components/ui/Input";
+import Button from "../components/ui/Button";
+import {
+  ArrowLeftIcon,
+  UserCircleIcon,
+  PhotoIcon,
+} from "@heroicons/react/24/outline";
+import { resolveImageUrl } from "../utils/imageUrl";
 
 const profileSchema = z.object({
-  name: z.string().max(255, 'Имя слишком длинное').optional(),
-  imageUrl: z.union([z.string().url('Некорректный URL').optional(), z.literal('')]).optional(),
+  name: z.string().max(255, "Имя слишком длинное").optional(),
+  imageUrl: z
+    .union([z.string().url("Некорректный URL").optional(), z.literal("")])
+    .optional(),
 });
 
-const passwordSchema = z.object({
-  currentPassword: z.string().min(1, 'Введите текущий пароль'),
-  newPassword: z.string().min(8, 'Пароль должен быть не менее 8 символов'),
-  confirmPassword: z.string().min(8, 'Пароль должен быть не менее 8 символов'),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: 'Пароли не совпадают',
-  path: ['confirmPassword'],
-});
+const passwordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Введите текущий пароль"),
+    newPassword: z.string().min(8, "Пароль должен быть не менее 8 символов"),
+    confirmPassword: z
+      .string()
+      .min(8, "Пароль должен быть не менее 8 символов"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Пароли не совпадают",
+    path: ["confirmPassword"],
+  });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 type PasswordFormData = z.infer<typeof passwordSchema>;
@@ -33,7 +43,9 @@ export default function ProfilePage() {
   const updateUser = useAuthStore((state) => state.updateUser);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [imagePreview, setImagePreview] = useState<string>(resolveImageUrl(user?.image));
+  const [imagePreview, setImagePreview] = useState<string>(
+    resolveImageUrl(user?.image),
+  );
   const [profileSuccess, setProfileSuccess] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
@@ -42,17 +54,20 @@ export default function ProfilePage() {
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: user?.name || '',
-      imageUrl: user?.image || '',
+      name: user?.name || "",
+      imageUrl: user?.image || "",
     },
   });
+
+  // Наблюдаем за именем для отображения в интерфейсе
+  const watchedName = profileForm.watch("name");
 
   const passwordForm = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
     defaultValues: {
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
     },
   });
 
@@ -62,14 +77,14 @@ export default function ProfilePage() {
     onSuccess: (response) => {
       const updatedUser = response.data;
       updateUser({ name: updatedUser.name, image: updatedUser.image });
-      profileForm.setValue('imageUrl', updatedUser.image || '');
+      profileForm.setValue("imageUrl", updatedUser.image || "");
       setImagePreview(resolveImageUrl(updatedUser.image));
       setProfileSuccess(true);
       setProfileError(null);
       setTimeout(() => setProfileSuccess(false), 3000);
     },
     onError: (err: any) => {
-      setProfileError(err.response?.data?.detail || 'Не удалось сохранить');
+      setProfileError(err.response?.data?.detail || "Не удалось сохранить");
       setProfileSuccess(false);
     },
   });
@@ -79,14 +94,16 @@ export default function ProfilePage() {
     onSuccess: (response) => {
       const updatedUser = response.data;
       updateUser({ image: updatedUser.image });
-      profileForm.setValue('imageUrl', updatedUser.image || '');
+      profileForm.setValue("imageUrl", updatedUser.image || "");
       setImagePreview(resolveImageUrl(updatedUser.image));
       setProfileSuccess(true);
       setProfileError(null);
       setTimeout(() => setProfileSuccess(false), 3000);
     },
     onError: (err: any) => {
-      setProfileError(err.response?.data?.detail || 'Не удалось загрузить файл');
+      setProfileError(
+        err.response?.data?.detail || "Не удалось загрузить файл",
+      );
       setProfileSuccess(false);
     },
   });
@@ -101,7 +118,9 @@ export default function ProfilePage() {
       setTimeout(() => setPasswordSuccess(false), 3000);
     },
     onError: (err: any) => {
-      setPasswordError(err.response?.data?.detail || 'Не удалось сменить пароль');
+      setPasswordError(
+        err.response?.data?.detail || "Не удалось сменить пароль",
+      );
       setPasswordSuccess(false);
     },
   });
@@ -110,18 +129,16 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Preview
     const reader = new FileReader();
     reader.onload = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
 
-    // Upload
     avatarMutation.mutate(file);
   };
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    profileForm.setValue('imageUrl', val);
+    profileForm.setValue("imageUrl", val);
     setImagePreview(val);
   };
 
@@ -129,7 +146,7 @@ export default function ProfilePage() {
     setProfileError(null);
     profileMutation.mutate({
       name: formData.name || undefined,
-      image: formData.imageUrl || undefined
+      image: formData.imageUrl || undefined,
     });
   };
 
@@ -137,7 +154,7 @@ export default function ProfilePage() {
     setPasswordError(null);
     passwordMutation.mutate({
       currentPassword: formData.currentPassword,
-      newPassword: formData.newPassword
+      newPassword: formData.newPassword,
     });
   };
 
@@ -164,14 +181,16 @@ export default function ProfilePage() {
           {imagePreview ? (
             <img
               src={imagePreview}
-              alt={name || 'Avatar'}
+              alt={watchedName || "Avatar"}
               className="h-16 w-16 rounded-full object-cover"
             />
           ) : (
             <UserCircleIcon className="h-16 w-16 text-gray-400" />
           )}
           <div>
-            <p className="text-lg font-semibold text-gray-900">{profileForm.watch('name') || user.email}</p>
+            <p className="text-lg font-semibold text-gray-900">
+              {watchedName || user.email}
+            </p>
             <p className="text-sm text-gray-500">{user.email}</p>
           </div>
         </div>
@@ -179,19 +198,24 @@ export default function ProfilePage() {
         {/* Profile form */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">Основные данные</h2>
-          <form onSubmit={profileForm.handleSubmit(handleProfileSubmit)} className="space-y-4">
+          <form
+            onSubmit={profileForm.handleSubmit(handleProfileSubmit)}
+            className="space-y-4"
+          >
             <Input
               label="Отображаемое имя"
               placeholder="Как вас называть?"
               error={profileForm.formState.errors.name?.message}
-              {...profileForm.register('name')}
+              {...profileForm.register("name")}
             />
 
             {/* Avatar picker */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Аватарка
-                {profileForm.formState.errors.imageUrl && <span className="text-red-600 ml-1">*</span>}
+                {profileForm.formState.errors.imageUrl && (
+                  <span className="text-red-600 ml-1">*</span>
+                )}
               </label>
               <div className="flex items-center space-x-3">
                 <button
@@ -200,33 +224,42 @@ export default function ProfilePage() {
                   className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <PhotoIcon className="h-5 w-5 mr-2 text-gray-400" />
-                  {avatarMutation.isPending ? 'Загрузка...' : 'Выбрать файл'}
+                  {avatarMutation.isPending ? "Загрузка..." : "Выбрать файл"}
                 </button>
                 <span className="text-sm text-gray-500">или</span>
                 <input
                   type="text"
-                  value={profileForm.watch('imageUrl') || ''}
+                  value={profileForm.watch("imageUrl") || ""}
                   onChange={handleUrlChange}
                   placeholder="https://example.com/avatar.jpg"
                   className={`flex-1 px-3 py-2 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                    profileForm.formState.errors.imageUrl ? 'border-red-300' : 'border-gray-300'
+                    profileForm.formState.errors.imageUrl
+                      ? "border-red-300"
+                      : "border-gray-300"
                   }`}
                 />
               </div>
               {profileForm.formState.errors.imageUrl && (
-                <p className="mt-1 text-sm text-red-600">{profileForm.formState.errors.imageUrl.message}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {profileForm.formState.errors.imageUrl.message}
+                </p>
               )}
               <input
                 ref={fileInputRef}
                 type="file"
+                // Исправлено: добавлены допустимые типы файлов
                 accept="image/jpeg,image/png,image/gif,image/webp"
                 onChange={handleFileChange}
                 className="hidden"
               />
             </div>
 
-            {profileError && <p className="text-sm text-red-600">{profileError}</p>}
-            {profileSuccess && <p className="text-sm text-green-600">Сохранено!</p>}
+            {profileError && (
+              <p className="text-sm text-red-600">{profileError}</p>
+            )}
+            {profileSuccess && (
+              <p className="text-sm text-green-600">Сохранено!</p>
+            )}
 
             <Button type="submit" isLoading={profileMutation.isPending}>
               Сохранить
@@ -237,28 +270,35 @@ export default function ProfilePage() {
         {/* Password form */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">Сменить пароль</h2>
-          <form onSubmit={passwordForm.handleSubmit(handlePasswordSubmit)} className="space-y-4">
+          <form
+            onSubmit={passwordForm.handleSubmit(handlePasswordSubmit)}
+            className="space-y-4"
+          >
             <Input
               type="password"
               label="Текущий пароль"
               error={passwordForm.formState.errors.currentPassword?.message}
-              {...passwordForm.register('currentPassword')}
+              {...passwordForm.register("currentPassword")}
             />
             <Input
               type="password"
               label="Новый пароль"
               error={passwordForm.formState.errors.newPassword?.message}
-              {...passwordForm.register('newPassword')}
+              {...passwordForm.register("newPassword")}
             />
             <Input
               type="password"
               label="Подтвердите новый пароль"
               error={passwordForm.formState.errors.confirmPassword?.message}
-              {...passwordForm.register('confirmPassword')}
+              {...passwordForm.register("confirmPassword")}
             />
 
-            {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
-            {passwordSuccess && <p className="text-sm text-green-600">Пароль изменён!</p>}
+            {passwordError && (
+              <p className="text-sm text-red-600">{passwordError}</p>
+            )}
+            {passwordSuccess && (
+              <p className="text-sm text-green-600">Пароль изменён!</p>
+            )}
 
             <Button type="submit" isLoading={passwordMutation.isPending}>
               Сменить пароль
