@@ -10,7 +10,7 @@ export default function RegisterPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             🎲 DnD Scheduler
           </h1>
-          <p className="text-gray-600">Create an account to get started</p>
+          <p className="text-gray-600">Создайте аккаунт для начала работы</p>
         </div>
 
         <RegisterForm />
@@ -21,7 +21,7 @@ export default function RegisterPage() {
               <div className="w-full border-t border-gray-300" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or continue with</span>
+              <span className="px-2 bg-white text-gray-500">Или войти через</span>
             </div>
           </div>
 
@@ -32,9 +32,9 @@ export default function RegisterPage() {
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            Already have an account?{' '}
+            Уже есть аккаунт?{' '}
             <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
-              Sign in
+              Войти
             </Link>
           </p>
         </div>

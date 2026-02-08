@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 import { UserGroupIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { availabilityApi } from '../../api/availability';
 
@@ -26,7 +27,7 @@ export default function SuggestedDatesSidebar({ groupId, memberCount, isOwner, o
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Suggested Dates</h3>
+        <h3 className="text-lg font-semibold">Подходящие даты</h3>
         <CalendarIcon className="h-5 w-5 text-gray-400" />
       </div>
 
@@ -45,13 +46,13 @@ export default function SuggestedDatesSidebar({ groupId, memberCount, isOwner, o
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <p className="font-medium text-gray-900">
-                      {format(start, 'EEE, MMM d')}
+                      {format(start, 'EEE, d MMM', { locale: ru })}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {format(start, 'h:mm a')} - {format(end, 'h:mm a')}
+                      {format(start, 'HH:mm')} - {format(end, 'HH:mm')}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {duration.toFixed(1)} hours
+                      {duration.toFixed(1)} ч.
                     </p>
                   </div>
                   <div className="flex items-center space-x-1 text-indigo-600">
@@ -83,7 +84,7 @@ export default function SuggestedDatesSidebar({ groupId, memberCount, isOwner, o
                     onClick={() => onSchedule(suggestion.startDateTime, suggestion.endDateTime)}
                     className="mt-2 w-full text-sm text-indigo-600 hover:text-indigo-700 font-medium"
                   >
-                    Schedule Session
+                    Назначить сессию
                   </button>
                 )}
               </div>
@@ -94,10 +95,10 @@ export default function SuggestedDatesSidebar({ groupId, memberCount, isOwner, o
         <div className="text-center py-8">
           <UserGroupIcon className="h-12 w-12 text-gray-300 mx-auto mb-2" />
           <p className="text-sm text-gray-500">
-            No suggested dates yet
+            Пока нет подходящих дат
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            Members need to mark their availability
+            Участники должны отметить свою доступность
           </p>
         </div>
       )}

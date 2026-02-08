@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ClipboardDocumentIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 import type { Invite } from '../../types/models';
 import { groupsApi } from '../../api/groups';
 import Button from '../ui/Button';
@@ -29,7 +30,7 @@ export default function InviteManager({ groupId, invites }: InviteManagerProps) 
       setError(null);
     },
     onError: (err: any) => {
-      setError(err.response?.data?.detail || 'Failed to create invite');
+      setError(err.response?.data?.detail || 'Не удалось создать приглашение');
     },
   });
 
@@ -60,14 +61,13 @@ export default function InviteManager({ groupId, invites }: InviteManagerProps) 
 
   return (
     <div className="space-y-6">
-      {/* Create New Invite */}
       <div>
-        <h4 className="font-medium mb-4">Create New Invite</h4>
+        <h4 className="font-medium mb-4">Новое приглашение</h4>
         <div className="space-y-3">
           <Input
             type="number"
-            label="Uses Left (optional)"
-            placeholder="Unlimited"
+            label="Количество использований (необязательно)"
+            placeholder="Без ограничений"
             value={usesLeft}
             onChange={(e) => setUsesLeft(e.target.value)}
             min="1"
@@ -75,17 +75,17 @@ export default function InviteManager({ groupId, invites }: InviteManagerProps) 
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Expires In
+              Срок действия
             </label>
             <select
               value={expiresIn}
               onChange={(e) => setExpiresIn(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="">Never</option>
-              <option value="1">1 day</option>
-              <option value="7">7 days</option>
-              <option value="30">30 days</option>
+              <option value="">Бессрочно</option>
+              <option value="1">1 день</option>
+              <option value="7">7 дней</option>
+              <option value="30">30 дней</option>
             </select>
           </div>
 
@@ -98,31 +98,30 @@ export default function InviteManager({ groupId, invites }: InviteManagerProps) 
             isLoading={createInviteMutation.isPending}
             className="w-full"
           >
-            Generate Invite Link
+            Создать ссылку
           </Button>
         </div>
       </div>
 
-      {/* Existing Invites */}
       {invites.length > 0 && (
         <div>
-          <h4 className="font-medium mb-4">Active Invites</h4>
+          <h4 className="font-medium mb-4">Активные приглашения</h4>
           <div className="space-y-2">
             {invites.map((invite) => (
               <div key={invite.id} className="border border-gray-200 rounded-lg p-3">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
                     <p className="text-sm text-gray-600">
-                      {invite.usesLeft ? `${invite.usesLeft} uses left` : 'Unlimited uses'}
+                      {invite.usesLeft ? `Осталось: ${invite.usesLeft}` : 'Без ограничений'}
                       {invite.expiresAt && (
-                        <span className="ml-2">• Expires {format(new Date(invite.expiresAt), 'MMM d')}</span>
+                        <span className="ml-2">• До {format(new Date(invite.expiresAt), 'd MMM', { locale: ru })}</span>
                       )}
                     </p>
                   </div>
                   <button
                     onClick={() => deleteInviteMutation.mutate({ inviteId: invite.id })}
                     className="text-red-600 hover:text-red-700"
-                    title="Delete invite"
+                    title="Удалить приглашение"
                   >
                     <TrashIcon className="h-4 w-4" />
                   </button>
@@ -137,10 +136,10 @@ export default function InviteManager({ groupId, invites }: InviteManagerProps) 
                   <button
                     onClick={() => copyInviteLink(invite.token)}
                     className={`p-2 ${copied === invite.token ? 'text-green-600' : 'text-indigo-600 hover:text-indigo-700'}`}
-                    title={copied === invite.token ? 'Copied!' : 'Copy link'}
+                    title={copied === invite.token ? 'Скопировано!' : 'Копировать ссылку'}
                   >
                     {copied === invite.token ? (
-                      <span className="text-xs font-medium">Copied!</span>
+                      <span className="text-xs font-medium">Скопировано!</span>
                     ) : (
                       <ClipboardDocumentIcon className="h-5 w-5" />
                     )}

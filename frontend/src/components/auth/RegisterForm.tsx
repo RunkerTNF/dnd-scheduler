@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,11 +11,11 @@ import Button from '../ui/Button';
 
 const registerSchema = z.object({
   name: z.string().optional(),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  email: z.string().email('Некорректный email'),
+  password: z.string().min(8, 'Пароль должен быть не менее 8 символов'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
+  message: 'Пароли не совпадают',
   path: ['confirmPassword'],
 });
 
@@ -23,6 +24,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export default function RegisterForm() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const {
     register,
@@ -39,21 +41,28 @@ export default function RegisterForm() {
       navigate('/groups');
     },
     onError: (error: any) => {
-      alert(error.response?.data?.detail || 'Registration failed');
+      setServerError(error.response?.data?.detail || 'Не удалось зарегистрироваться');
     },
   });
 
   const onSubmit = (data: RegisterFormData) => {
+    setServerError(null);
     const { confirmPassword, ...registerData } = data;
     registerMutation.mutate(registerData);
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {serverError && (
+        <div className="rounded-md bg-red-50 p-3">
+          <p className="text-sm text-red-700">{serverError}</p>
+        </div>
+      )}
+
       <Input
-        label="Name (optional)"
+        label="Имя (необязательно)"
         type="text"
-        placeholder="John Doe"
+        placeholder="Иван Иванов"
         error={errors.name?.message}
         {...register('name')}
       />
@@ -67,7 +76,7 @@ export default function RegisterForm() {
       />
 
       <Input
-        label="Password"
+        label="Пароль"
         type="password"
         placeholder="••••••••"
         error={errors.password?.message}
@@ -75,7 +84,7 @@ export default function RegisterForm() {
       />
 
       <Input
-        label="Confirm Password"
+        label="Подтвердите пароль"
         type="password"
         placeholder="••••••••"
         error={errors.confirmPassword?.message}
@@ -87,7 +96,7 @@ export default function RegisterForm() {
         className="w-full"
         isLoading={registerMutation.isPending}
       >
-        Create Account
+        Создать аккаунт
       </Button>
     </form>
   );

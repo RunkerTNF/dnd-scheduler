@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 import { UsersIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import type { GroupDetail } from '../../types/models';
 
@@ -26,7 +27,7 @@ export default function GroupCard({ group, isOwner }: GroupCardProps) {
             {group.name}
             {isOwner && (
               <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
-                GM
+                Мастер
               </span>
             )}
           </h3>
@@ -39,18 +40,18 @@ export default function GroupCard({ group, isOwner }: GroupCardProps) {
       <div className="flex items-center justify-between text-sm text-gray-500">
         <div className="flex items-center">
           <UsersIcon className="h-5 w-5 mr-1" />
-          <span>{group.memberships.length} member{group.memberships.length !== 1 ? 's' : ''}</span>
+          <span>{group.memberships.length} уч.</span>
         </div>
 
         {nextEvent ? (
           <div className="flex items-center text-indigo-600">
             <CalendarIcon className="h-5 w-5 mr-1" />
-            <span>{format(new Date(nextEvent.scheduledAt), 'MMM d, h:mm a')}</span>
+            <span>{format(new Date(nextEvent.scheduledAt), 'd MMM, HH:mm', { locale: ru })}</span>
           </div>
         ) : (
           <div className="flex items-center text-gray-400">
             <CalendarIcon className="h-5 w-5 mr-1" />
-            <span>No games scheduled</span>
+            <span>Нет запланированных игр</span>
           </div>
         )}
       </div>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -7,7 +8,7 @@ import Input from '../ui/Input';
 import Button from '../ui/Button';
 
 const createGroupSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name is too long'),
+  name: z.string().min(1, 'Введите название').max(100, 'Название слишком длинное'),
   description: z.string().optional(),
 });
 
@@ -19,6 +20,7 @@ interface CreateGroupFormProps {
 
 export default function CreateGroupForm({ onSuccess }: CreateGroupFormProps) {
   const queryClient = useQueryClient();
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const {
     register,
@@ -35,31 +37,38 @@ export default function CreateGroupForm({ onSuccess }: CreateGroupFormProps) {
       onSuccess();
     },
     onError: (error: any) => {
-      alert(error.response?.data?.detail || 'Failed to create group');
+      setServerError(error.response?.data?.detail || 'Не удалось создать группу');
     },
   });
 
   const onSubmit = (data: CreateGroupFormData) => {
+    setServerError(null);
     createMutation.mutate(data);
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {serverError && (
+        <div className="rounded-md bg-red-50 p-3">
+          <p className="text-sm text-red-700">{serverError}</p>
+        </div>
+      )}
+
       <Input
-        label="Group Name"
-        placeholder="The Lost Mines Campaign"
+        label="Название группы"
+        placeholder="Затерянные рудники Фанделвера"
         error={errors.name?.message}
         {...register('name')}
       />
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Description (optional)
+          Описание (необязательно)
         </label>
         <textarea
           className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           rows={3}
-          placeholder="A brief description of your campaign..."
+          placeholder="Краткое описание кампании..."
           {...register('description')}
         />
         {errors.description && (
@@ -73,13 +82,13 @@ export default function CreateGroupForm({ onSuccess }: CreateGroupFormProps) {
           variant="secondary"
           onClick={onSuccess}
         >
-          Cancel
+          Отмена
         </Button>
         <Button
           type="submit"
           isLoading={createMutation.isPending}
         >
-          Create Group
+          Создать группу
         </Button>
       </div>
     </form>

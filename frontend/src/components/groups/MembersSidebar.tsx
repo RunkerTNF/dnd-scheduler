@@ -33,7 +33,7 @@ export default function MembersSidebar({ group, isOwner }: MembersSidebarProps) 
   });
 
   const handleRemoveMember = (userId: string, userName: string) => {
-    if (confirm(`Remove ${userName} from the group?`)) {
+    if (confirm(`Удалить ${userName} из группы?`)) {
       removeMemberMutation.mutate(userId);
     }
   };
@@ -47,10 +47,9 @@ export default function MembersSidebar({ group, isOwner }: MembersSidebarProps) 
 
   return (
     <div className="space-y-6">
-      {/* Members List */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Members ({group.memberships.length})</h3>
+          <h3 className="text-lg font-semibold">Участники ({group.memberships.length})</h3>
           {isOwner && (
             <Button
               size="sm"
@@ -59,7 +58,7 @@ export default function MembersSidebar({ group, isOwner }: MembersSidebarProps) 
               className="flex items-center"
             >
               <PlusIcon className="h-4 w-4 mr-1" />
-              Invite
+              Пригласить
             </Button>
           )}
         </div>
@@ -74,7 +73,7 @@ export default function MembersSidebar({ group, isOwner }: MembersSidebarProps) 
                 {membership.user.image ? (
                   <img
                     src={resolveImageUrl(membership.user.image)}
-                    alt={membership.user.name || 'User'}
+                    alt={membership.user.name || ''}
                     className="h-10 w-10 rounded-full object-cover"
                   />
                 ) : (
@@ -85,7 +84,7 @@ export default function MembersSidebar({ group, isOwner }: MembersSidebarProps) 
                     {membership.user.name || membership.user.email}
                   </p>
                   {membership.role === 'gm' && (
-                    <span className="text-xs text-indigo-600 font-medium">Game Master</span>
+                    <span className="text-xs text-indigo-600 font-medium">Мастер</span>
                   )}
                 </div>
               </div>
@@ -94,7 +93,7 @@ export default function MembersSidebar({ group, isOwner }: MembersSidebarProps) 
                 <button
                   onClick={() => handleRemoveMember(membership.userId, membership.user.name || membership.user.email)}
                   className="text-red-600 hover:text-red-700 p-1"
-                  title="Remove member"
+                  title="Удалить участника"
                 >
                   <TrashIcon className="h-5 w-5" />
                 </button>
@@ -104,21 +103,20 @@ export default function MembersSidebar({ group, isOwner }: MembersSidebarProps) 
         </div>
       </div>
 
-      {/* Active Invites */}
       {isOwner && group.invites.length > 0 && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">Active Invites</h3>
+          <h3 className="text-lg font-semibold mb-4">Активные приглашения</h3>
           <div className="space-y-3">
             {group.invites.map((invite) => (
               <div key={invite.id} className="p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-gray-600">
-                    {invite.usesLeft ? `${invite.usesLeft} uses left` : 'Unlimited'}
+                    {invite.usesLeft ? `Осталось: ${invite.usesLeft}` : 'Без ограничений'}
                   </span>
                   <button
                     onClick={() => deleteInviteMutation.mutate(invite.id)}
                     className="text-red-500 hover:text-red-700 p-1"
-                    title="Delete invite"
+                    title="Удалить приглашение"
                   >
                     <TrashIcon className="h-4 w-4" />
                   </button>
@@ -133,10 +131,10 @@ export default function MembersSidebar({ group, isOwner }: MembersSidebarProps) 
                   <button
                     onClick={() => copyInviteLink(invite.token)}
                     className={`p-1.5 rounded ${copied === invite.token ? 'text-green-600' : 'text-indigo-600 hover:text-indigo-700'}`}
-                    title={copied === invite.token ? 'Copied!' : 'Copy link'}
+                    title={copied === invite.token ? 'Скопировано!' : 'Копировать ссылку'}
                   >
                     {copied === invite.token ? (
-                      <span className="text-xs font-medium">Copied!</span>
+                      <span className="text-xs font-medium">Скопировано!</span>
                     ) : (
                       <ClipboardDocumentIcon className="h-4 w-4" />
                     )}
@@ -148,11 +146,10 @@ export default function MembersSidebar({ group, isOwner }: MembersSidebarProps) 
         </div>
       )}
 
-      {/* Invite Modal */}
       <Modal
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
-        title="Invite Members"
+        title="Пригласить участников"
       >
         <InviteManager
           groupId={group.id}

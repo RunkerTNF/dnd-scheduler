@@ -11,8 +11,6 @@ import { getUserColor, hexToRgba } from '../../utils/colorHelpers';
 import MembersSidebar from '../../components/groups/MembersSidebar';
 import SuggestedDatesSidebar from '../../components/availability/SuggestedDatesSidebar';
 import EventModal from '../../components/events/EventModal';
-import Modal from '../../components/ui/Modal';
-import Button from '../../components/ui/Button';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 const localizer = momentLocalizer(moment);
@@ -34,9 +32,10 @@ export default function GroupDetailPage() {
   const queryClient = useQueryClient();
   const [date, setDate] = useState(new Date());
   const [eventModalOpen, setEventModalOpen] = useState(false);
+  const [eventModalMode, setEventModalMode] = useState<'create' | 'edit' | 'view'>('create');
+  const [eventModalData, setEventModalData] = useState<any>(null);
   const [eventInitialStart, setEventInitialStart] = useState<Date | undefined>();
   const [eventInitialEnd, setEventInitialEnd] = useState<Date | undefined>();
-  const [cancelEvent, setCancelEvent] = useState<{ id: string; title: string } | null>(null);
 
   const handleNavigate = useCallback((newDate: Date) => setDate(newDate), []);
 
@@ -82,15 +81,6 @@ export default function GroupDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['availability', groupId] });
       queryClient.invalidateQueries({ queryKey: ['availability-overlaps', groupId] });
-    },
-  });
-
-  const deleteEventMutation = useMutation({
-    mutationFn: (eventId: string) =>
-      eventsApi.delete(groupId!, eventId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events', groupId] });
-      setCancelEvent(null);
     },
   });
 
@@ -190,13 +180,20 @@ export default function GroupDetailPage() {
       deleteAvailabilityMutation.mutate(event.resource.data.id);
       return;
     }
-    // Клик на игру — ГМ может отменить
-    if (event.resource.type === 'event' && group && group.ownerId === user?.id) {
-      setCancelEvent({ id: event.resource.data.id, title: event.resource.data.title });
+    // Клик на игру — ГМ: редактирование, игрок: просмотр
+    if (event.resource.type === 'event') {
+      const eventData = event.resource.data;
+      setEventModalData(eventData);
+      setEventModalMode(group && group.ownerId === user?.id ? 'edit' : 'view');
+      setEventInitialStart(undefined);
+      setEventInitialEnd(undefined);
+      setEventModalOpen(true);
     }
-  }, [deleteAvailabilityMutation, deleteEventMutation, user, group]);
+  }, [deleteAvailabilityMutation, user, group]);
 
   const handleScheduleFromSuggestion = useCallback((startDateTime: string, endDateTime: string) => {
+    setEventModalMode('create');
+    setEventModalData(null);
     setEventInitialStart(new Date(startDateTime));
     setEventInitialEnd(new Date(endDateTime));
     setEventModalOpen(true);
@@ -205,7 +202,7 @@ export default function GroupDetailPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p>Loading...</p>
+        <p>Загрузка...</p>
       </div>
     );
   }
@@ -213,7 +210,7 @@ export default function GroupDetailPage() {
   if (!group) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-red-600">Group not found</p>
+        <p className="text-red-600">Группа не найдена</p>
       </div>
     );
   }
@@ -236,7 +233,7 @@ export default function GroupDetailPage() {
               {group.name}
               {isOwner && (
                 <span className="ml-3 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                  Game Master
+                  Мастер
                 </span>
               )}
             </h1>
@@ -247,6 +244,8 @@ export default function GroupDetailPage() {
           {isOwner && (
             <button
               onClick={() => {
+                setEventModalMode('create');
+                setEventModalData(null);
                 setEventInitialStart(undefined);
                 setEventInitialEnd(undefined);
                 setEventModalOpen(true);
@@ -324,32 +323,11 @@ export default function GroupDetailPage() {
         isOpen={eventModalOpen}
         onClose={() => setEventModalOpen(false)}
         groupId={groupId!}
+        mode={eventModalMode}
+        event={eventModalData}
         initialStart={eventInitialStart}
         initialEnd={eventInitialEnd}
       />
-
-      <Modal
-        isOpen={!!cancelEvent}
-        onClose={() => setCancelEvent(null)}
-        title="Отменить игру"
-        size="sm"
-      >
-        <p className="text-gray-600 mb-6">
-          Вы уверены что хотите отменить игру <strong>"{cancelEvent?.title}"</strong>?
-        </p>
-        <div className="flex justify-end space-x-3">
-          <Button variant="secondary" onClick={() => setCancelEvent(null)}>
-            Нет
-          </Button>
-          <Button
-            variant="danger"
-            isLoading={deleteEventMutation.isPending}
-            onClick={() => cancelEvent && deleteEventMutation.mutate(cancelEvent.id)}
-          >
-            Отменить игру
-          </Button>
-        </div>
-      </Modal>
     </div>
   );
 }
