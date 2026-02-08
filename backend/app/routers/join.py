@@ -20,7 +20,8 @@ def accept_invite(
 ) -> schemas.JoinResponseSchema:
     token = payload.token.strip()
     if not token:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="invalid")
 
     invite = (
         db.query(models.Invite)
@@ -29,11 +30,18 @@ def accept_invite(
         .one_or_none()
     )
     if invite is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="invalid")
 
     now = datetime.now(timezone.utc)
-    if invite.expiresAt and invite.expiresAt < now:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="expired")
+    expires_at = invite.expiresAt
+
+    if expires_at and expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    if expires_at and expires_at < now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="expired")
 
     group_id = invite.groupId
 
@@ -55,7 +63,8 @@ def accept_invite(
 
     if invite.usesLeft is not None:
         if invite.usesLeft <= 0:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="no_uses")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="no_uses")
         invite.usesLeft -= 1
 
     db.commit()
