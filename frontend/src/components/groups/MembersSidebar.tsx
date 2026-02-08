@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserCircleIcon, TrashIcon, PlusIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
+import { UserCircleIcon, TrashIcon, PlusIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline';
 import type { GroupDetail } from '../../types/models';
 import { groupsApi } from '../../api/groups';
 import { resolveImageUrl } from '../../utils/imageUrl';
@@ -130,11 +130,11 @@ export default function MembersSidebar({ group, isOwner }: MembersSidebarProps) 
                   />
                   <button
                     onClick={() => copyInviteLink(invite.token)}
-                    className={`p-1.5 rounded ${copied === invite.token ? 'text-green-600' : 'text-indigo-600 hover:text-indigo-700'}`}
+                    className={`p-1.5 rounded transition-colors ${copied === invite.token ? 'bg-green-50 text-green-600' : 'text-indigo-600 hover:bg-indigo-50'}`}
                     title={copied === invite.token ? 'Скопировано!' : 'Копировать ссылку'}
                   >
                     {copied === invite.token ? (
-                      <span className="text-xs font-medium">Скопировано!</span>
+                      <CheckIcon className="h-4 w-4" />
                     ) : (
                       <ClipboardDocumentIcon className="h-4 w-4" />
                     )}

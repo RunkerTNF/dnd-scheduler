@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { eventsApi } from '../../api/events';
 import Modal from '../ui/Modal';
@@ -34,6 +37,15 @@ function toLocalDateTimeString(date: Date): string {
 
 const DURATION_OPTIONS = ['60', '90', '120', '150', '180', '240', '300', '360'];
 
+const eventSchema = z.object({
+  title: z.string().min(1, 'Введите название').max(255, 'Название слишком длинное'),
+  scheduledAt: z.string().min(1, 'Выберите дату и время'),
+  durationMinutes: z.string().refine((val) => DURATION_OPTIONS.includes(val), 'Выберите длительность'),
+  notes: z.string().optional(),
+});
+
+type EventFormData = z.infer<typeof eventSchema>;
+
 function closestDuration(minutes: number): string {
   let best = DURATION_OPTIONS[0];
   let bestDiff = Math.abs(minutes - parseInt(best));
@@ -68,34 +80,50 @@ function toGoogleCalendarUrl(title: string, startDate: Date, endDate: Date, note
 }
 
 export default function EventModal({ isOpen, onClose, groupId, mode, event, initialStart, initialEnd }: EventModalProps) {
-  const [title, setTitle] = useState('');
-  const [scheduledAt, setScheduledAt] = useState('');
-  const [durationMinutes, setDurationMinutes] = useState('180');
-  const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  const {
+    register,
+    handleSubmit: hookFormHandleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<EventFormData>({
+    resolver: zodResolver(eventSchema),
+    defaultValues: {
+      title: '',
+      scheduledAt: '',
+      durationMinutes: '180',
+      notes: '',
+    },
+  });
 
   useEffect(() => {
     if (!isOpen) return;
     setError(null);
 
     if (mode === 'create') {
-      setTitle('');
-      setNotes('');
-      setScheduledAt(initialStart ? toLocalDateTimeString(initialStart) : '');
+      const scheduledAt = initialStart ? toLocalDateTimeString(initialStart) : '';
+      let durationMinutes = '180';
       if (initialStart && initialEnd) {
         const diffMin = Math.round((initialEnd.getTime() - initialStart.getTime()) / 60000);
-        setDurationMinutes(closestDuration(diffMin));
-      } else {
-        setDurationMinutes('180');
+        durationMinutes = closestDuration(diffMin);
       }
+      reset({
+        title: '',
+        notes: '',
+        scheduledAt,
+        durationMinutes,
+      });
     } else if (event) {
-      setTitle(event.title);
-      setNotes(event.notes || '');
-      setScheduledAt(toLocalDateTimeString(new Date(event.scheduledAt)));
-      setDurationMinutes(closestDuration(event.durationMinutes));
+      reset({
+        title: event.title,
+        notes: event.notes || '',
+        scheduledAt: toLocalDateTimeString(new Date(event.scheduledAt)),
+        durationMinutes: closestDuration(event.durationMinutes),
+      });
     }
-  }, [isOpen, mode, event, initialStart, initialEnd]);
+  }, [isOpen, mode, event, initialStart, initialEnd, reset]);
 
   const createMutation = useMutation({
     mutationFn: (data: { scheduledAt: string; durationMinutes: number; title: string; notes?: string }) =>
@@ -132,19 +160,16 @@ export default function EventModal({ isOpen, onClose, groupId, mode, event, init
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title || !scheduledAt || !durationMinutes) return;
-
-    const localDate = new Date(scheduledAt);
+  const handleSubmit = (formData: EventFormData) => {
+    const localDate = new Date(formData.scheduledAt);
     const pad = (n: number) => n.toString().padStart(2, '0');
     const localISO = `${localDate.getFullYear()}-${pad(localDate.getMonth() + 1)}-${pad(localDate.getDate())}T${pad(localDate.getHours())}:${pad(localDate.getMinutes())}:00`;
 
     const data = {
       scheduledAt: localISO,
-      durationMinutes: parseInt(durationMinutes),
-      title,
-      notes: notes || undefined,
+      durationMinutes: parseInt(formData.durationMinutes),
+      title: formData.title,
+      notes: formData.notes || undefined,
     };
 
     if (mode === 'create') {
@@ -215,27 +240,29 @@ export default function EventModal({ isOpen, onClose, groupId, mode, event, init
   // Create / Edit mode
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={modalTitle}>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={hookFormHandleSubmit(handleSubmit)} className="space-y-4">
         <Input
           label="Название"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
           placeholder="Например: Сессия #5 — Логово дракона"
-          required
+          error={errors.title?.message}
+          {...register('title')}
         />
         <Input
           type="datetime-local"
           label="Дата и время"
-          value={scheduledAt}
-          onChange={(e) => setScheduledAt(e.target.value)}
-          required
+          error={errors.scheduledAt?.message}
+          {...register('scheduledAt')}
         />
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Длительность</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Длительность
+            {errors.durationMinutes && <span className="text-red-600 ml-1">*</span>}
+          </label>
           <select
-            value={durationMinutes}
-            onChange={(e) => setDurationMinutes(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            {...register('durationMinutes')}
+            className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+              errors.durationMinutes ? 'border-red-300' : 'border-gray-300'
+            }`}
           >
             <option value="60">1 час</option>
             <option value="90">1.5 часа</option>
@@ -246,14 +273,16 @@ export default function EventModal({ isOpen, onClose, groupId, mode, event, init
             <option value="300">5 часов</option>
             <option value="360">6 часов</option>
           </select>
+          {errors.durationMinutes && (
+            <p className="mt-1 text-sm text-red-600">{errors.durationMinutes.message}</p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Заметки (необязательно)</label>
           <textarea
+            {...register('notes')}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             rows={2}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
             placeholder="Например: Возьмите листы персонажей"
           />
         </div>

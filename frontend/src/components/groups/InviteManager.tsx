@@ -1,12 +1,26 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ClipboardDocumentIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { ClipboardDocumentIcon, TrashIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import type { Invite } from '../../types/models';
 import { groupsApi } from '../../api/groups';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+
+const inviteSchema = z.object({
+  usesLeft: z.string().optional().refine((val) => {
+    if (!val || val === '') return true;
+    const num = parseInt(val);
+    return !isNaN(num) && num > 0;
+  }, 'Введите положительное число'),
+  expiresIn: z.string(),
+});
+
+type InviteFormData = z.infer<typeof inviteSchema>;
 
 interface InviteManagerProps {
   groupId: string;
@@ -15,18 +29,29 @@ interface InviteManagerProps {
 }
 
 export default function InviteManager({ groupId, invites }: InviteManagerProps) {
-  const [usesLeft, setUsesLeft] = useState<string>('');
-  const [expiresIn, setExpiresIn] = useState<string>('7');
   const [copied, setCopied] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  const {
+    register,
+    handleSubmit: hookFormHandleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<InviteFormData>({
+    resolver: zodResolver(inviteSchema),
+    defaultValues: {
+      usesLeft: '',
+      expiresIn: '7',
+    },
+  });
 
   const createInviteMutation = useMutation({
     mutationFn: (data: { usesLeft?: number; expiresAt?: string }) =>
       groupsApi.createInvite(groupId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group', groupId] });
-      setUsesLeft('');
+      reset();
       setError(null);
     },
     onError: (err: any) => {
@@ -41,13 +66,13 @@ export default function InviteManager({ groupId, invites }: InviteManagerProps) 
     },
   });
 
-  const handleCreateInvite = () => {
-    const expiresAt = expiresIn
-      ? new Date(Date.now() + parseInt(expiresIn) * 24 * 60 * 60 * 1000).toISOString()
+  const handleCreateInvite = (formData: InviteFormData) => {
+    const expiresAt = formData.expiresIn
+      ? new Date(Date.now() + parseInt(formData.expiresIn) * 24 * 60 * 60 * 1000).toISOString()
       : undefined;
 
     createInviteMutation.mutate({
-      usesLeft: usesLeft ? parseInt(usesLeft) : undefined,
+      usesLeft: formData.usesLeft ? parseInt(formData.usesLeft) : undefined,
       expiresAt,
     });
   };
@@ -63,14 +88,14 @@ export default function InviteManager({ groupId, invites }: InviteManagerProps) 
     <div className="space-y-6">
       <div>
         <h4 className="font-medium mb-4">Новое приглашение</h4>
-        <div className="space-y-3">
+        <form onSubmit={hookFormHandleSubmit(handleCreateInvite)} className="space-y-3">
           <Input
             type="number"
             label="Количество использований (необязательно)"
             placeholder="Без ограничений"
-            value={usesLeft}
-            onChange={(e) => setUsesLeft(e.target.value)}
+            error={errors.usesLeft?.message}
             min="1"
+            {...register('usesLeft')}
           />
 
           <div>
@@ -78,8 +103,7 @@ export default function InviteManager({ groupId, invites }: InviteManagerProps) 
               Срок действия
             </label>
             <select
-              value={expiresIn}
-              onChange={(e) => setExpiresIn(e.target.value)}
+              {...register('expiresIn')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">Бессрочно</option>
@@ -94,13 +118,13 @@ export default function InviteManager({ groupId, invites }: InviteManagerProps) 
           )}
 
           <Button
-            onClick={handleCreateInvite}
+            type="submit"
             isLoading={createInviteMutation.isPending}
             className="w-full"
           >
             Создать ссылку
           </Button>
-        </div>
+        </form>
       </div>
 
       {invites.length > 0 && (
@@ -135,11 +159,11 @@ export default function InviteManager({ groupId, invites }: InviteManagerProps) 
                   />
                   <button
                     onClick={() => copyInviteLink(invite.token)}
-                    className={`p-2 ${copied === invite.token ? 'text-green-600' : 'text-indigo-600 hover:text-indigo-700'}`}
+                    className={`p-2 rounded transition-colors ${copied === invite.token ? 'bg-green-50 text-green-600' : 'text-indigo-600 hover:bg-indigo-50'}`}
                     title={copied === invite.token ? 'Скопировано!' : 'Копировать ссылку'}
                   >
                     {copied === invite.token ? (
-                      <span className="text-xs font-medium">Скопировано!</span>
+                      <CheckIcon className="h-5 w-5" />
                     ) : (
                       <ClipboardDocumentIcon className="h-5 w-5" />
                     )}
