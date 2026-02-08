@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Calendar, momentLocalizer, View } from 'react-big-calendar';
+import { Calendar, momentLocalizer } from 'react-big-calendar';
+import type { View } from 'react-big-calendar';
 import moment from 'moment';
 import type { Event, AvailabilityWithUser, Membership } from '../../types/models';
 import { getUserColor, hexToRgba } from '../../utils/colorHelpers';
@@ -26,7 +27,7 @@ interface CalendarEvent {
   };
 }
 
-export default function CalendarView({ groupId, events, availability, members, isOwner }: CalendarViewProps) {
+export default function CalendarView({ events, availability, members, isOwner }: CalendarViewProps) {
   const [view, setView] = useState<View>('month');
   const [date, setDate] = useState(new Date());
 

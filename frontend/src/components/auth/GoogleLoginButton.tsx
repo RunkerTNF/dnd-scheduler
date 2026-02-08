@@ -28,7 +28,7 @@ export default function GoogleLoginButton() {
         const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
           headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
         });
-        const userData = await userInfo.json();
+        await userInfo.json();
 
         // For now, we'll use a workaround since we need the ID token
         // In production, you should use the Google Sign-In flow properly

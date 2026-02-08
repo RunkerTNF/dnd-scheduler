@@ -13,7 +13,7 @@ interface InviteManagerProps {
   onClose: () => void;
 }
 
-export default function InviteManager({ groupId, invites, onClose }: InviteManagerProps) {
+export default function InviteManager({ groupId, invites }: InviteManagerProps) {
   const [usesLeft, setUsesLeft] = useState<string>('');
   const [expiresIn, setExpiresIn] = useState<string>('7');
   const [copied, setCopied] = useState<string | null>(null);
