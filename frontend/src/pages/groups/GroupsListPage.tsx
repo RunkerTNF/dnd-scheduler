@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { PlusIcon, UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import { groupsApi } from '../../api/groups';
 import { useAuthStore } from '../../store/authStore';
+import { resolveImageUrl } from '../../utils/imageUrl';
 import GroupCard from '../../components/groups/GroupCard';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
@@ -64,7 +65,15 @@ export default function GroupsListPage() {
               to="/profile"
               className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
             >
-              <UserCircleIcon className="h-5 w-5 mr-1" />
+              {user?.image ? (
+                <img
+                  src={resolveImageUrl(user.image)}
+                  alt=""
+                  className="h-6 w-6 rounded-full object-cover mr-1"
+                />
+              ) : (
+                <UserCircleIcon className="h-6 w-6 mr-1" />
+              )}
               {user?.name || user?.email}
             </Link>
             <button

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserCircleIcon, TrashIcon, PlusIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
 import type { GroupDetail } from '../../types/models';
 import { groupsApi } from '../../api/groups';
+import { resolveImageUrl } from '../../utils/imageUrl';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import InviteManager from './InviteManager';
@@ -72,9 +73,9 @@ export default function MembersSidebar({ group, isOwner }: MembersSidebarProps) 
               <div className="flex items-center space-x-3">
                 {membership.user.image ? (
                   <img
-                    src={membership.user.image}
+                    src={resolveImageUrl(membership.user.image)}
                     alt={membership.user.name || 'User'}
-                    className="h-10 w-10 rounded-full"
+                    className="h-10 w-10 rounded-full object-cover"
                   />
                 ) : (
                   <UserCircleIcon className="h-10 w-10 text-gray-400" />

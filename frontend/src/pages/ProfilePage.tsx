@@ -6,17 +6,7 @@ import { usersApi } from '../api/users';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import { ArrowLeftIcon, UserCircleIcon, PhotoIcon } from '@heroicons/react/24/outline';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
-
-function resolveImageUrl(image: string | null | undefined): string {
-  if (!image) return '';
-  if (image.startsWith('http://') || image.startsWith('https://') || image.startsWith('data:')) {
-    return image;
-  }
-  // Relative path from backend (e.g. /uploads/avatars/...)
-  return `${API_BASE}${image}`;
-}
+import { resolveImageUrl } from '../utils/imageUrl';
 
 export default function ProfilePage() {
   const user = useAuthStore((state) => state.user);
