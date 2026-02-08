@@ -7,7 +7,7 @@ interface SuggestedDatesSidebarProps {
   groupId: string;
   memberCount: number;
   isOwner: boolean;
-  onSchedule?: (startDateTime: string) => void;
+  onSchedule?: (startDateTime: string, endDateTime: string) => void;
 }
 
 export default function SuggestedDatesSidebar({ groupId, memberCount, isOwner, onSchedule }: SuggestedDatesSidebarProps) {
@@ -80,7 +80,7 @@ export default function SuggestedDatesSidebar({ groupId, memberCount, isOwner, o
 
                 {isOwner && onSchedule && (
                   <button
-                    onClick={() => onSchedule(suggestion.startDateTime)}
+                    onClick={() => onSchedule(suggestion.startDateTime, suggestion.endDateTime)}
                     className="mt-2 w-full text-sm text-indigo-600 hover:text-indigo-700 font-medium"
                   >
                     Schedule Session

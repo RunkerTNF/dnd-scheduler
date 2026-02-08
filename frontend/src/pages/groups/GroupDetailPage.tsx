@@ -35,6 +35,7 @@ export default function GroupDetailPage() {
   const [date, setDate] = useState(new Date());
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [eventInitialStart, setEventInitialStart] = useState<Date | undefined>();
+  const [eventInitialEnd, setEventInitialEnd] = useState<Date | undefined>();
   const [cancelEvent, setCancelEvent] = useState<{ id: string; title: string } | null>(null);
 
   const handleNavigate = useCallback((newDate: Date) => setDate(newDate), []);
@@ -151,27 +152,35 @@ export default function GroupDetailPage() {
     }
   };
 
-  const handleSelectSlot = useCallback(({ start }: { start: Date; end: Date }) => {
+  const handleSelectSlot = useCallback(({ start, end }: { start: Date; end: Date }) => {
     if (!user) return;
 
-    // Проверяем, есть ли уже метка этого игрока на этот день
-    const existingForDay = availability.find(
-      a => a.userId === user.id && isSameDay(new Date(a.startDateTime), start)
-    );
+    // react-big-calendar в month view при драге выдаёт end = следующий день после последнего выбранного
+    // Собираем все дни от start до end (не включая end)
+    const days: Date[] = [];
+    const current = new Date(start);
+    while (current < end) {
+      days.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
 
-    if (existingForDay) {
-      // Уже есть — убираем (toggle)
-      deleteAvailabilityMutation.mutate(existingForDay.id);
-    } else {
-      // Ставим метку на весь день
-      const dayStart = new Date(start);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(start);
-      dayEnd.setHours(23, 59, 59, 0);
-      createAvailabilityMutation.mutate({
-        startDateTime: toLocalISOString(dayStart),
-        endDateTime: toLocalISOString(dayEnd),
-      });
+    for (const day of days) {
+      const existingForDay = availability.find(
+        a => a.userId === user.id && isSameDay(new Date(a.startDateTime), day)
+      );
+
+      if (existingForDay) {
+        deleteAvailabilityMutation.mutate(existingForDay.id);
+      } else {
+        const dayStart = new Date(day);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(day);
+        dayEnd.setHours(23, 59, 59, 0);
+        createAvailabilityMutation.mutate({
+          startDateTime: toLocalISOString(dayStart),
+          endDateTime: toLocalISOString(dayEnd),
+        });
+      }
     }
   }, [createAvailabilityMutation, deleteAvailabilityMutation, availability, user]);
 
@@ -187,8 +196,9 @@ export default function GroupDetailPage() {
     }
   }, [deleteAvailabilityMutation, deleteEventMutation, user, group]);
 
-  const handleScheduleFromSuggestion = useCallback((startDateTime: string) => {
+  const handleScheduleFromSuggestion = useCallback((startDateTime: string, endDateTime: string) => {
     setEventInitialStart(new Date(startDateTime));
+    setEventInitialEnd(new Date(endDateTime));
     setEventModalOpen(true);
   }, []);
 
@@ -238,6 +248,7 @@ export default function GroupDetailPage() {
             <button
               onClick={() => {
                 setEventInitialStart(undefined);
+                setEventInitialEnd(undefined);
                 setEventModalOpen(true);
               }}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -314,6 +325,7 @@ export default function GroupDetailPage() {
         onClose={() => setEventModalOpen(false)}
         groupId={groupId!}
         initialStart={eventInitialStart}
+        initialEnd={eventInitialEnd}
       />
 
       <Modal

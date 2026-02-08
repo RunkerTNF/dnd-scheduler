@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { PlusIcon } from '@heroicons/react/24/outline';
+import { Link, useNavigate } from 'react-router-dom';
+import { PlusIcon, UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import { groupsApi } from '../../api/groups';
 import { useAuthStore } from '../../store/authStore';
 import GroupCard from '../../components/groups/GroupCard';
@@ -10,7 +11,14 @@ import CreateGroupForm from '../../components/groups/CreateGroupForm';
 
 export default function GroupsListPage() {
   const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+  const navigate = useNavigate();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const { data: groups, isLoading, error } = useQuery({
     queryKey: ['groups'],
@@ -29,7 +37,7 @@ export default function GroupsListPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading groups...</p>
+          <p className="mt-4 text-gray-600">Загрузка групп...</p>
         </div>
       </div>
     );
@@ -39,7 +47,7 @@ export default function GroupsListPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600">Failed to load groups</p>
+          <p className="text-red-600">Не удалось загрузить группы</p>
         </div>
       </div>
     );
@@ -47,12 +55,34 @@ export default function GroupsListPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Верхняя панель */}
+      <div className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">D&D Scheduler</h2>
+          <div className="flex items-center space-x-3">
+            <Link
+              to="/profile"
+              className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
+            >
+              <UserCircleIcon className="h-5 w-5 mr-1" />
+              {user?.name || user?.email}
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center text-sm text-gray-500 hover:text-red-600"
+            >
+              <ArrowRightOnRectangleIcon className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Groups</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Мои группы</h1>
             <p className="text-gray-600 mt-1">
-              Manage your D&D campaigns and schedule sessions
+              Управляйте кампаниями и планируйте сессии
             </p>
           </div>
           <Button
@@ -60,7 +90,7 @@ export default function GroupsListPage() {
             className="flex items-center"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
-            Create Group
+            Создать группу
           </Button>
         </div>
 
@@ -80,13 +110,13 @@ export default function GroupsListPage() {
               <PlusIcon className="h-8 w-8 text-gray-400" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No groups yet
+              Пока нет групп
             </h3>
             <p className="text-gray-600 mb-4">
-              Get started by creating your first campaign group
+              Создайте свою первую группу для кампании
             </p>
             <Button onClick={() => setIsCreateModalOpen(true)}>
-              Create Your First Group
+              Создать первую группу
             </Button>
           </div>
         )}
@@ -95,7 +125,7 @@ export default function GroupsListPage() {
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Create New Group"
+        title="Создать группу"
       >
         <CreateGroupForm onSuccess={() => setIsCreateModalOpen(false)} />
       </Modal>

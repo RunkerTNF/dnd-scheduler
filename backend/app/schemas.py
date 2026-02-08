@@ -196,3 +196,14 @@ class EventUpdateSchema(BaseModel):
     durationMinutes: Optional[int] = Field(default=None, ge=30, le=720)
     title: Optional[str] = None
     notes: Optional[str] = None
+
+
+# Profile schemas
+class ProfileUpdateSchema(BaseModel):
+    name: Optional[str] = None
+    image: Optional[str] = None
+
+
+class ChangePasswordSchema(BaseModel):
+    currentPassword: str
+    newPassword: str = Field(min_length=8)
