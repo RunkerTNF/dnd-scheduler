@@ -1,4 +1,5 @@
-import { forwardRef, useState, InputHTMLAttributes } from 'react';
+import { forwardRef, useState } from 'react';
+import type { InputHTMLAttributes } from 'react';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 interface PasswordInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
