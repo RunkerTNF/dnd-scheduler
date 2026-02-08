@@ -7,10 +7,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authApi } from '../../api/auth';
 import { useAuthStore } from '../../store/authStore';
 import Input from '../ui/Input';
+import PasswordInput from '../ui/PasswordInput';
 import Button from '../ui/Button';
 
 const registerSchema = z.object({
-  name: z.string().optional(),
+  name: z.string().max(50, 'Имя слишком длинное (максимум 50 символов)').optional(),
   email: z.string().email('Некорректный email'),
   password: z.string().min(8, 'Пароль должен быть не менее 8 символов'),
   confirmPassword: z.string(),
@@ -77,17 +78,15 @@ export default function RegisterForm() {
         {...register('email')}
       />
 
-      <Input
+      <PasswordInput
         label="Пароль"
-        type="password"
         placeholder="••••••••"
         error={errors.password?.message}
         {...register('password')}
       />
 
-      <Input
+      <PasswordInput
         label="Подтвердите пароль"
-        type="password"
         placeholder="••••••••"
         error={errors.confirmPassword?.message}
         {...register('confirmPassword')}

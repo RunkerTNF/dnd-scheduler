@@ -7,6 +7,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authApi } from '../../api/auth';
 import { useAuthStore } from '../../store/authStore';
 import Input from '../ui/Input';
+import PasswordInput from '../ui/PasswordInput';
 import Button from '../ui/Button';
 
 const loginSchema = z.object({
@@ -63,9 +64,8 @@ export default function LoginForm() {
         {...register('email')}
       />
 
-      <Input
+      <PasswordInput
         label="Пароль"
-        type="password"
         placeholder="••••••••"
         error={errors.password?.message}
         {...register('password')}

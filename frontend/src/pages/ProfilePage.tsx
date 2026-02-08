@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { usersApi } from "../api/users";
 import Input from "../components/ui/Input";
+import PasswordInput from "../components/ui/PasswordInput";
 import Button from "../components/ui/Button";
 import {
   ArrowLeftIcon,
@@ -16,7 +17,7 @@ import {
 import { resolveImageUrl } from "../utils/imageUrl";
 
 const profileSchema = z.object({
-  name: z.string().max(255, "Имя слишком длинное").optional(),
+  name: z.string().max(50, "Имя слишком длинное (максимум 50 символов)").optional(),
   imageUrl: z
     .union([z.string().url("Некорректный URL").optional(), z.literal("")])
     .optional(),
@@ -128,6 +129,13 @@ export default function ProfilePage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Проверка размера файла (5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setProfileError('Файл слишком большой (максимум 5 МБ)');
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = () => setImagePreview(reader.result as string);
@@ -274,20 +282,17 @@ export default function ProfilePage() {
             onSubmit={passwordForm.handleSubmit(handlePasswordSubmit)}
             className="space-y-4"
           >
-            <Input
-              type="password"
+            <PasswordInput
               label="Текущий пароль"
               error={passwordForm.formState.errors.currentPassword?.message}
               {...passwordForm.register("currentPassword")}
             />
-            <Input
-              type="password"
+            <PasswordInput
               label="Новый пароль"
               error={passwordForm.formState.errors.newPassword?.message}
               {...passwordForm.register("newPassword")}
             />
-            <Input
-              type="password"
+            <PasswordInput
               label="Подтвердите новый пароль"
               error={passwordForm.formState.errors.confirmPassword?.message}
               {...passwordForm.register("confirmPassword")}

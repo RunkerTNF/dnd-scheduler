@@ -29,6 +29,10 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       // Clear auth and redirect to login
       useAuthStore.getState().logout();
+      // Очищаем весь localStorage кроме темы (если она есть)
+      const theme = localStorage.getItem('theme');
+      localStorage.clear();
+      if (theme) localStorage.setItem('theme', theme);
       window.location.href = '/login';
     }
     return Promise.reject(error);

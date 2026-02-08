@@ -9,7 +9,7 @@ import Button from '../ui/Button';
 
 const createGroupSchema = z.object({
   name: z.string().min(1, 'Введите название').max(100, 'Название слишком длинное'),
-  description: z.string().optional(),
+  description: z.string().max(500, 'Описание слишком длинное (максимум 500 символов)').optional(),
 });
 
 type CreateGroupFormData = z.infer<typeof createGroupSchema>;
