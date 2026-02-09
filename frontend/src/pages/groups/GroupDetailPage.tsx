@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { groupsApi } from '../../api/groups';
 import { eventsApi } from '../../api/events';
@@ -11,7 +11,8 @@ import { getUserColor, hexToRgba } from '../../utils/colorHelpers';
 import MembersSidebar from '../../components/groups/MembersSidebar';
 import SuggestedDatesSidebar from '../../components/availability/SuggestedDatesSidebar';
 import EventModal from '../../components/events/EventModal';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import DeleteGroupModal from '../../components/groups/DeleteGroupModal';
+import { ArrowLeftIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 const localizer = momentLocalizer(moment);
 
@@ -30,12 +31,14 @@ export default function GroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const user = useAuthStore((state) => state.user);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [date, setDate] = useState(new Date());
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [eventModalMode, setEventModalMode] = useState<'create' | 'edit' | 'view'>('create');
   const [eventModalData, setEventModalData] = useState<any>(null);
   const [eventInitialStart, setEventInitialStart] = useState<Date | undefined>();
   const [eventInitialEnd, setEventInitialEnd] = useState<Date | undefined>();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   const handleNavigate = useCallback((newDate: Date) => setDate(newDate), []);
 
@@ -242,18 +245,27 @@ export default function GroupDetailPage() {
             )}
           </div>
           {isOwner && (
-            <button
-              onClick={() => {
-                setEventModalMode('create');
-                setEventModalData(null);
-                setEventInitialStart(undefined);
-                setEventInitialEnd(undefined);
-                setEventModalOpen(true);
-              }}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Назначить игру
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setEventModalMode('create');
+                  setEventModalData(null);
+                  setEventInitialStart(undefined);
+                  setEventInitialEnd(undefined);
+                  setEventModalOpen(true);
+                }}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Назначить игру
+              </button>
+              <button
+                onClick={() => setDeleteModalOpen(true)}
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                title="Удалить группу"
+              >
+                <TrashIcon className="h-5 w-5" />
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -327,6 +339,13 @@ export default function GroupDetailPage() {
         event={eventModalData}
         initialStart={eventInitialStart}
         initialEnd={eventInitialEnd}
+      />
+
+      <DeleteGroupModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        group={{ id: group.id, name: group.name }}
+        onDeleteSuccess={() => navigate('/groups')}
       />
     </div>
   );
