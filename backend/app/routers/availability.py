@@ -210,10 +210,11 @@ def get_availability_overlaps(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Get suggested time slots based on player availability overlaps.
+    """Get suggested dates based on player availability overlaps.
 
-    Returns time windows where the minimum number of players are available.
-    Results are ranked by the number of available players.
+    Groups availability by DATE and finds days where the minimum number of players are available.
+    For each suggested date, returns the time window when ALL suggested players overlap.
+    Results are ranked by player count, duration, then date.
     """
     # Verify user is a member of the group
     group = verify_group_membership(db, current_user, group_id)
@@ -242,58 +243,83 @@ def get_availability_overlaps(
     if not all_availability:
         return []
 
-    # Simple overlap algorithm: Find time windows where >= min_players are available
-    # This is a simplified version - a production algorithm would be more sophisticated
-    suggestions = []
-
-    # Group availability by rough time windows (to find overlaps)
+    # Day-based overlap algorithm: Find DATES where >= min_players are available
+    # Groups availability by date and finds overlapping time windows for each date
     from collections import defaultdict
     from datetime import timedelta
 
-    # Create events for each availability start/end
-    events = []
+    # Group availability by date
+    dates_availability = defaultdict(dict)
+
     for avail in all_availability:
-        events.append((avail.startDateTime, 'start', avail.userId, avail.user))
-        events.append((avail.endDateTime, 'end', avail.userId, avail.user))
+        # Get all dates covered by this availability period
+        start_date = avail.startDateTime.date()
+        end_date = avail.endDateTime.date()
 
-    events.sort(key=lambda x: x[0])
+        current_date = start_date
+        while current_date <= end_date:
+            user_id = avail.userId
 
-    # Track currently available players
-    current_players = {}  # userId -> user
-    last_time = None
+            # Track earliest start and latest end for this user on this date
+            if user_id in dates_availability[current_date]:
+                existing = dates_availability[current_date][user_id]
+                # Update to earliest start
+                if avail.startDateTime < existing['start']:
+                    existing['start'] = avail.startDateTime
+                # Update to latest end
+                if avail.endDateTime > existing['end']:
+                    existing['end'] = avail.endDateTime
+            else:
+                dates_availability[current_date][user_id] = {
+                    'user': avail.user,
+                    'start': avail.startDateTime,
+                    'end': avail.endDateTime,
+                }
 
-    duration_minutes = duration_hours * 60
+            current_date += timedelta(days=1)
 
-    for event_time, event_type, user_id, user in events:
-        # If we have enough players and a significant time window, add suggestion
-        if last_time and len(current_players) >= min_players:
-            window_duration = (event_time - last_time).total_seconds() / 60
-            if window_duration >= duration_minutes:
-                suggestions.append({
-                    "startDateTime": last_time.isoformat(),
-                    "endDateTime": event_time.isoformat(),
-                    "playerCount": len(current_players),
-                    "availablePlayers": [
-                        {
-                            "id": u.id,
-                            "name": u.name,
-                            "email": u.email,
-                            "image": u.image,
-                        }
-                        for u in current_players.values()
-                    ],
-                })
+    # Find dates with enough players
+    suggestions = []
 
-        # Update current players
-        if event_type == 'start':
-            current_players[user_id] = user
-        else:
-            current_players.pop(user_id, None)
+    for day, players_dict in dates_availability.items():
+        player_count = len(players_dict)
 
-        last_time = event_time
+        if player_count >= min_players:
+            # Get time range for this date
+            all_starts = [p['start'] for p in players_dict.values()]
+            all_ends = [p['end'] for p in players_dict.values()]
 
-    # Sort suggestions by player count (descending), then by date (ascending)
-    suggestions.sort(key=lambda x: (-x["playerCount"], x["startDateTime"]))
+            # For the suggested window, use the intersection:
+            # Latest start time (when last person becomes available)
+            # Earliest end time (when first person leaves)
+            latest_start = max(all_starts)
+            earliest_end = min(all_ends)
+
+            # Make sure there's actually an overlap
+            if latest_start < earliest_end:
+                duration_minutes = (earliest_end - latest_start).total_seconds() / 60
+
+                # Check if overlap meets minimum duration requirement
+                if duration_minutes >= duration_hours * 60:
+                    suggestions.append({
+                        "date": day.isoformat(),
+                        "startDateTime": latest_start.isoformat(),
+                        "endDateTime": earliest_end.isoformat(),
+                        "playerCount": player_count,
+                        "duration_hours": duration_minutes / 60,
+                        "availablePlayers": [
+                            {
+                                "id": p['user'].id,
+                                "name": p['user'].name,
+                                "email": p['user'].email,
+                                "image": p['user'].image,
+                            }
+                            for p in players_dict.values()
+                        ],
+                    })
+
+    # Sort by player count (desc), duration (desc), then date (asc)
+    suggestions.sort(key=lambda x: (-x["playerCount"], -x["duration_hours"], x["date"]))
 
     # Return top 10 suggestions
     return suggestions[:10]

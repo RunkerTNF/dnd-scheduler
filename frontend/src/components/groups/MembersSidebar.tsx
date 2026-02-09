@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserCircleIcon, TrashIcon, PlusIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline';
 import type { GroupDetail } from '../../types/models';
 import { groupsApi } from '../../api/groups';
 import { resolveImageUrl } from '../../utils/imageUrl';
+import { sortMemberships } from '../../utils/colorHelpers';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import InviteManager from './InviteManager';
@@ -17,6 +18,11 @@ export default function MembersSidebar({ group, isOwner }: MembersSidebarProps) 
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // Отсортированные участники: ГМ сверху, остальные по алфавиту
+  const sortedMemberships = useMemo(() => {
+    return sortMemberships(group.memberships, group.ownerId);
+  }, [group.memberships, group.ownerId]);
 
   const removeMemberMutation = useMutation({
     mutationFn: (userId: string) => groupsApi.removeMember(group.id, userId),
@@ -64,7 +70,7 @@ export default function MembersSidebar({ group, isOwner }: MembersSidebarProps) 
         </div>
 
         <div className="space-y-3">
-          {group.memberships.map((membership) => (
+          {sortedMemberships.map((membership) => (
             <div
               key={membership.userId}
               className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50"

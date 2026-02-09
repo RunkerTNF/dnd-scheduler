@@ -1,5 +1,7 @@
 // Player color assignment for availability visualization
 
+import type { Membership } from '../types/models';
+
 const PLAYER_COLORS = [
   '#EF4444', // red
   '#F97316', // orange
@@ -18,6 +20,22 @@ const PLAYER_COLORS = [
   '#D946EF', // fuchsia
   '#EC4899', // pink
 ];
+
+/**
+ * Сортирует участников группы: ГМ (владелец) сверху, остальные по алфавиту
+ */
+export function sortMemberships(memberships: Membership[], ownerId: string): Membership[] {
+  return [...memberships].sort((a, b) => {
+    // ГМ (owner) всегда первый
+    if (a.userId === ownerId) return -1;
+    if (b.userId === ownerId) return 1;
+
+    // Остальные по имени/email в алфавитном порядке
+    const nameA = a.user.name || a.user.email;
+    const nameB = b.user.name || b.user.email;
+    return nameA.localeCompare(nameB, 'ru');
+  });
+}
 
 export function getUserColor(userId: string, allUserIds: string[]): string {
   const index = allUserIds.indexOf(userId);

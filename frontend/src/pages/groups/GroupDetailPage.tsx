@@ -1,30 +1,39 @@
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { groupsApi } from '../../api/groups';
-import { eventsApi } from '../../api/events';
-import { availabilityApi } from '../../api/availability';
-import { useAuthStore } from '../../store/authStore';
-import { Calendar, momentLocalizer } from 'react-big-calendar';
-import moment from 'moment';
-import { useState, useMemo, useCallback } from 'react';
-import { getUserColor, hexToRgba } from '../../utils/colorHelpers';
-import MembersSidebar from '../../components/groups/MembersSidebar';
-import SuggestedDatesSidebar from '../../components/availability/SuggestedDatesSidebar';
-import EventModal from '../../components/events/EventModal';
-import DeleteGroupModal from '../../components/groups/DeleteGroupModal';
-import { ArrowLeftIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { groupsApi } from "../../api/groups";
+import { eventsApi } from "../../api/events";
+import { availabilityApi } from "../../api/availability";
+import { useAuthStore } from "../../store/authStore";
+import { Calendar, momentLocalizer } from "react-big-calendar";
+import moment from "moment";
+import { useState, useMemo, useCallback } from "react";
+import { getUserColor, hexToRgba, sortMemberships } from "../../utils/colorHelpers";
+import MembersSidebar from "../../components/groups/MembersSidebar";
+import SuggestedDatesSidebar from "../../components/availability/SuggestedDatesSidebar";
+import EventModal from "../../components/events/EventModal";
+import DeleteGroupModal from "../../components/groups/DeleteGroupModal";
+import { ArrowLeftIcon, TrashIcon } from "@heroicons/react/24/outline";
+
+// Настройка русской локали для календаря (неделя начинается с понедельника)
+moment.updateLocale("en", {
+  week: {
+    dow: 1, // Monday is the first day of the week
+  },
+});
 
 const localizer = momentLocalizer(moment);
 
 function toLocalISOString(date: Date): string {
-  const pad = (n: number) => n.toString().padStart(2, '0');
+  const pad = (n: number) => n.toString().padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
 function isSameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() &&
+  return (
+    a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
+    a.getDate() === b.getDate()
+  );
 }
 
 export default function GroupDetailPage() {
@@ -34,16 +43,20 @@ export default function GroupDetailPage() {
   const navigate = useNavigate();
   const [date, setDate] = useState(new Date());
   const [eventModalOpen, setEventModalOpen] = useState(false);
-  const [eventModalMode, setEventModalMode] = useState<'create' | 'edit' | 'view'>('create');
+  const [eventModalMode, setEventModalMode] = useState<
+    "create" | "edit" | "view"
+  >("create");
   const [eventModalData, setEventModalData] = useState<any>(null);
-  const [eventInitialStart, setEventInitialStart] = useState<Date | undefined>();
+  const [eventInitialStart, setEventInitialStart] = useState<
+    Date | undefined
+  >();
   const [eventInitialEnd, setEventInitialEnd] = useState<Date | undefined>();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   const handleNavigate = useCallback((newDate: Date) => setDate(newDate), []);
 
   const { data: group, isLoading } = useQuery({
-    queryKey: ['group', groupId],
+    queryKey: ["group", groupId],
     queryFn: async () => {
       const response = await groupsApi.get(groupId!);
       return response.data;
@@ -52,7 +65,7 @@ export default function GroupDetailPage() {
   });
 
   const { data: events = [] } = useQuery({
-    queryKey: ['events', groupId],
+    queryKey: ["events", groupId],
     queryFn: async () => {
       const response = await eventsApi.list(groupId!);
       return response.data;
@@ -61,7 +74,7 @@ export default function GroupDetailPage() {
   });
 
   const { data: availability = [] } = useQuery({
-    queryKey: ['availability', groupId],
+    queryKey: ["availability", groupId],
     queryFn: async () => {
       const response = await availabilityApi.list(groupId!);
       return response.data;
@@ -73,44 +86,56 @@ export default function GroupDetailPage() {
     mutationFn: (data: { startDateTime: string; endDateTime: string }) =>
       availabilityApi.create(groupId!, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['availability', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['availability-overlaps', groupId] });
+      queryClient.invalidateQueries({ queryKey: ["availability", groupId] });
+      queryClient.invalidateQueries({
+        queryKey: ["availability-overlaps", groupId],
+      });
     },
   });
 
   const deleteAvailabilityMutation = useMutation({
-    mutationFn: (availId: string) =>
-      availabilityApi.delete(groupId!, availId),
+    mutationFn: (availId: string) => availabilityApi.delete(groupId!, availId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['availability', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['availability-overlaps', groupId] });
+      queryClient.invalidateQueries({ queryKey: ["availability", groupId] });
+      queryClient.invalidateQueries({
+        queryKey: ["availability-overlaps", groupId],
+      });
     },
   });
 
-  const allUserIds = useMemo(() => {
-    return group?.memberships.map(m => m.userId) || [];
+  // Отсортированные участники: ГМ сверху, остальные по алфавиту
+  const sortedMemberships = useMemo(() => {
+    if (!group) return [];
+    return sortMemberships(group.memberships, group.ownerId);
   }, [group]);
 
+  const allUserIds = useMemo(() => {
+    return sortedMemberships.map((m) => m.userId);
+  }, [sortedMemberships]);
+
   const calendarEvents = useMemo(() => {
-    const eventItems = events.map(event => ({
+    const eventItems = events.map((event) => ({
       id: event.id,
       title: event.title,
       start: new Date(event.scheduledAt),
-      end: new Date(new Date(event.scheduledAt).getTime() + event.durationMinutes * 60 * 1000),
+      end: new Date(
+        new Date(event.scheduledAt).getTime() +
+          event.durationMinutes * 60 * 1000,
+      ),
       allDay: true,
-      resource: { type: 'event', data: event },
+      resource: { type: "event", data: event },
     }));
 
-    const availabilityItems = availability.map(avail => {
+    const availabilityItems = availability.map((avail) => {
       const color = getUserColor(avail.userId, allUserIds);
-      const memberName = avail.user.name || avail.user.email.split('@')[0];
+      const memberName = avail.user.name || avail.user.email.split("@")[0];
       return {
         id: avail.id,
         title: memberName,
         start: new Date(avail.startDateTime),
         end: new Date(avail.endDateTime),
         allDay: true,
-        resource: { type: 'availability', data: avail, color },
+        resource: { type: "availability", data: avail, color },
       };
     });
 
@@ -118,89 +143,109 @@ export default function GroupDetailPage() {
   }, [events, availability, allUserIds]);
 
   const eventStyleGetter = (event: any) => {
-    if (event.resource.type === 'event') {
+    if (event.resource.type === "event") {
       return {
         style: {
-          backgroundColor: '#4F46E5',
-          borderColor: '#4338CA',
-          color: 'white',
-          fontWeight: 'bold',
-          cursor: 'pointer',
+          backgroundColor: "#4F46E5",
+          borderColor: "#4338CA",
+          color: "white",
+          fontWeight: "bold",
+          cursor: "pointer",
         },
       };
     } else {
-      const color = event.resource.color || '#9CA3AF';
+      const color = event.resource.color || "#9CA3AF";
       const isOwn = event.resource.data.userId === user?.id;
       return {
         style: {
           backgroundColor: hexToRgba(color, 0.3),
           borderColor: color,
-          borderWidth: '2px',
-          borderStyle: 'solid',
+          borderWidth: "2px",
+          borderStyle: "solid",
           color: color,
-          fontWeight: 'normal',
-          cursor: isOwn ? 'pointer' : 'default',
+          fontWeight: "normal",
+          cursor: isOwn ? "pointer" : "default",
         },
       };
     }
   };
 
-  const handleSelectSlot = useCallback(({ start, end }: { start: Date; end: Date }) => {
-    if (!user) return;
+  const handleSelectSlot = useCallback(
+    ({ start, end }: { start: Date; end: Date }) => {
+      if (!user) return;
 
-    // react-big-calendar в month view при драге выдаёт end = следующий день после последнего выбранного
-    // Собираем все дни от start до end (не включая end)
-    const days: Date[] = [];
-    const current = new Date(start);
-    while (current < end) {
-      days.push(new Date(current));
-      current.setDate(current.getDate() + 1);
-    }
-
-    for (const day of days) {
-      const existingForDay = availability.find(
-        a => a.userId === user.id && isSameDay(new Date(a.startDateTime), day)
-      );
-
-      if (existingForDay) {
-        deleteAvailabilityMutation.mutate(existingForDay.id);
-      } else {
-        const dayStart = new Date(day);
-        dayStart.setHours(0, 0, 0, 0);
-        const dayEnd = new Date(day);
-        dayEnd.setHours(23, 59, 59, 0);
-        createAvailabilityMutation.mutate({
-          startDateTime: toLocalISOString(dayStart),
-          endDateTime: toLocalISOString(dayEnd),
-        });
+      // react-big-calendar в month view при драге выдаёт end = следующий день после последнего выбранного
+      // Собираем все дни от start до end (не включая end)
+      const days: Date[] = [];
+      const current = new Date(start);
+      while (current < end) {
+        days.push(new Date(current));
+        current.setDate(current.getDate() + 1);
       }
-    }
-  }, [createAvailabilityMutation, deleteAvailabilityMutation, availability, user]);
 
-  const handleSelectEvent = useCallback((event: any) => {
-    // Клик на свою метку — удалить
-    if (event.resource.type === 'availability' && event.resource.data.userId === user?.id) {
-      deleteAvailabilityMutation.mutate(event.resource.data.id);
-      return;
-    }
-    // Клик на игру — ГМ: редактирование, игрок: просмотр
-    if (event.resource.type === 'event') {
-      const eventData = event.resource.data;
-      setEventModalData(eventData);
-      setEventModalMode(group && group.ownerId === user?.id ? 'edit' : 'view');
-      setEventInitialStart(undefined);
-      setEventInitialEnd(undefined);
+      for (const day of days) {
+        const existingForDay = availability.find(
+          (a) =>
+            a.userId === user.id && isSameDay(new Date(a.startDateTime), day),
+        );
+
+        if (existingForDay) {
+          deleteAvailabilityMutation.mutate(existingForDay.id);
+        } else {
+          const dayStart = new Date(day);
+          dayStart.setHours(0, 0, 0, 0);
+          const dayEnd = new Date(day);
+          dayEnd.setHours(23, 59, 59, 0);
+          createAvailabilityMutation.mutate({
+            startDateTime: toLocalISOString(dayStart),
+            endDateTime: toLocalISOString(dayEnd),
+          });
+        }
+      }
+    },
+    [
+      createAvailabilityMutation,
+      deleteAvailabilityMutation,
+      availability,
+      user,
+    ],
+  );
+
+  const handleSelectEvent = useCallback(
+    (event: any) => {
+      // Клик на свою метку — удалить
+      if (
+        event.resource.type === "availability" &&
+        event.resource.data.userId === user?.id
+      ) {
+        deleteAvailabilityMutation.mutate(event.resource.data.id);
+        return;
+      }
+      // Клик на игру — ГМ: редактирование, игрок: просмотр
+      if (event.resource.type === "event") {
+        const eventData = event.resource.data;
+        setEventModalData(eventData);
+        setEventModalMode(
+          group && group.ownerId === user?.id ? "edit" : "view",
+        );
+        setEventInitialStart(undefined);
+        setEventInitialEnd(undefined);
+        setEventModalOpen(true);
+      }
+    },
+    [deleteAvailabilityMutation, user, group],
+  );
+
+  const handleScheduleFromSuggestion = useCallback(
+    (startDateTime: string, endDateTime: string) => {
+      setEventModalMode("create");
+      setEventModalData(null);
+      setEventInitialStart(new Date(startDateTime));
+      setEventInitialEnd(new Date(endDateTime));
       setEventModalOpen(true);
-    }
-  }, [deleteAvailabilityMutation, user, group]);
-
-  const handleScheduleFromSuggestion = useCallback((startDateTime: string, endDateTime: string) => {
-    setEventModalMode('create');
-    setEventModalData(null);
-    setEventInitialStart(new Date(startDateTime));
-    setEventInitialEnd(new Date(endDateTime));
-    setEventModalOpen(true);
-  }, []);
+    },
+    [],
+  );
 
   if (isLoading) {
     return (
@@ -248,7 +293,7 @@ export default function GroupDetailPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => {
-                  setEventModalMode('create');
+                  setEventModalMode("create");
                   setEventModalData(null);
                   setEventInitialStart(undefined);
                   setEventInitialEnd(undefined);
@@ -281,20 +326,29 @@ export default function GroupDetailPage() {
           <div className="lg:col-span-2">
             {/* Player Legend */}
             <div className="mb-4 flex flex-wrap gap-2">
-              {group.memberships.map((member) => {
+              {sortedMemberships.map((member) => {
                 const color = getUserColor(member.userId, allUserIds);
                 return (
-                  <div key={member.userId} className="flex items-center space-x-2">
-                    <div className="w-4 h-4 rounded" style={{ backgroundColor: color }} />
+                  <div
+                    key={member.userId}
+                    className="flex items-center space-x-2"
+                  >
+                    <div
+                      className="w-4 h-4 rounded"
+                      style={{ backgroundColor: color }}
+                    />
                     <span className="text-sm text-gray-700">
-                      {member.user.name || member.user.email.split('@')[0]}
+                      {member.user.name || member.user.email.split("@")[0]}
                     </span>
                   </div>
                 );
               })}
             </div>
 
-            <div className="bg-white rounded-lg shadow p-4" style={{ height: '900px' }}>
+            <div
+              className="bg-white rounded-lg shadow p-4"
+              style={{ height: "900px" }}
+            >
               <Calendar
                 localizer={localizer}
                 events={calendarEvents}
@@ -307,14 +361,15 @@ export default function GroupDetailPage() {
                 onSelectSlot={handleSelectSlot}
                 onSelectEvent={handleSelectEvent}
                 selectable
-                views={['month']}
+                views={["month"]}
                 popup
               />
             </div>
 
             <div className="mt-4 text-sm text-gray-600">
               <p>
-                Кликните на дату чтобы отметить доступность. Повторный клик — убрать.
+                Кликните на дату чтобы отметить доступность. Повторный клик —
+                убрать.
               </p>
             </div>
           </div>
@@ -345,7 +400,7 @@ export default function GroupDetailPage() {
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
         group={{ id: group.id, name: group.name }}
-        onDeleteSuccess={() => navigate('/groups')}
+        onDeleteSuccess={() => navigate("/groups")}
       />
     </div>
   );

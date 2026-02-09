@@ -54,8 +54,13 @@ export default function RegisterForm() {
     registerMutation.mutate(registerData);
   };
 
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSubmit(onSubmit)(e);
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleFormSubmit} className="space-y-4">
       {serverError && (
         <div className="rounded-md bg-red-50 p-3">
           <p className="text-sm text-red-700">{serverError}</p>

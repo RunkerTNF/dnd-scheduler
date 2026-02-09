@@ -78,7 +78,7 @@ class GroupDetailSchema(GroupBaseSchema):
 
 
 class GroupCreateSchema(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=35)
     description: Optional[str] = None
 
 

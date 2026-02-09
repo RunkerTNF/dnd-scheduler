@@ -8,7 +8,7 @@ import Input from '../ui/Input';
 import Button from '../ui/Button';
 
 const createGroupSchema = z.object({
-  name: z.string().min(1, 'Введите название').max(100, 'Название слишком длинное'),
+  name: z.string().min(1, 'Введите название').max(35, 'Название слишком длинное (максимум 35 символов)'),
   description: z.string().max(500, 'Описание слишком длинное (максимум 500 символов)').optional(),
 });
 

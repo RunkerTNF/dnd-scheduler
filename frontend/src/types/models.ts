@@ -77,8 +77,10 @@ export interface GroupDetail extends GroupBase {
 }
 
 export interface OverlapSuggestion {
+  date: string; // ISO date string (YYYY-MM-DD)
   startDateTime: string;
   endDateTime: string;
   playerCount: number;
+  duration_hours: number;
   availablePlayers: MembershipUser[];
 }

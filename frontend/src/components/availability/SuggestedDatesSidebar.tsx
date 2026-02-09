@@ -36,7 +36,7 @@ export default function SuggestedDatesSidebar({ groupId, memberCount, isOwner, o
           {suggestions.map((suggestion, index) => {
             const start = new Date(suggestion.startDateTime);
             const end = new Date(suggestion.endDateTime);
-            const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+            const duration = suggestion.duration_hours;
 
             return (
               <div
@@ -46,13 +46,13 @@ export default function SuggestedDatesSidebar({ groupId, memberCount, isOwner, o
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <p className="font-medium text-gray-900">
-                      {format(start, 'EEE, d MMM', { locale: ru })}
+                      {format(start, 'EEEE, d MMMM', { locale: ru })}
                     </p>
                     <p className="text-sm text-gray-600">
                       {format(start, 'HH:mm')} - {format(end, 'HH:mm')}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {duration.toFixed(1)} ч.
+                      {duration.toFixed(1)} ч. пересечения
                     </p>
                   </div>
                   <div className="flex items-center space-x-1 text-indigo-600">
