@@ -11,7 +11,7 @@ services:
         VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
     restart: unless-stopped
     ports:
-      - "80:80"  # Для тестов открыт. Потом изменить на "127.0.0.1:80:80"
+      - "8080:80"  # Внутри контейнера nginx на порту 80, снаружи 8080
     depends_on:
       - backend
     networks:
