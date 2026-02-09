@@ -1,6 +1,7 @@
 version: "3.9"
 
 services:
+  # Frontend - React приложение с nginx
   frontend:
     build:
       context: ..
@@ -8,25 +9,99 @@ services:
       args:
         VITE_API_BASE_URL: "/api"
         VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+    restart: unless-stopped
     ports:
-      - "80:80"
+      - "80:80"  # Для тестов открыт. Потом изменить на "127.0.0.1:80:80"
     depends_on:
       - backend
+    networks:
+      - app-network
 
+  # Backend - FastAPI приложение
   backend:
     build:
       context: ..
       dockerfile: backend/Dockerfile
+    restart: unless-stopped
     env_file:
       - ../.env
     environment:
-      # Для управляемой БД нужно передать внешний DATABASE_URL
-      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to your managed PostgreSQL connection string}
+      # Для управляемой БД используйте DATABASE_URL из .env
+      # Для контейнерной БД используйте строку ниже
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://app:app@db:5432/dnd}
     ports:
-      - "8000:8000"
+      - "8000:8000"  # Для тестов открыт. Потом изменить на "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
     volumes:
       - uploads:/app/backend/uploads
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    networks:
+      - app-network
+
+  # PostgreSQL база данных
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-dnd}
+    # Порт НЕ пробрасываем наружу для безопасности
+    # ports:
+    #   - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-dnd}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # Автоматический бэкап БД (каждые 24 часа)
+  db-backup:
+    image: postgres:15
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-dnd}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-86400}  # 24 часа в секундах
+    volumes:
+      - ../backups:/backups
+    entrypoint: ["/bin/bash", "-c"]
+    command: >
+      "mkdir -p /backups &&
+      while true; do
+        ts=$$(date +%Y%m%d_%H%M%S);
+        echo '[INFO]' $$(date) 'Starting database backup...';
+        PGPASSWORD=$$POSTGRES_PASSWORD pg_dump -h $$POSTGRES_HOST -U $$POSTGRES_USER -d $$POSTGRES_DB -Fc -f /backups/db_$$ts.dump;
+        if [ $$? -eq 0 ]; then
+          echo '[SUCCESS]' $$(date) 'Backup completed: db_'$$ts'.dump';
+        else
+          echo '[ERROR]' $$(date) 'Backup failed!';
+        fi;
+        echo '[INFO]' 'Next backup in' $$BACKUP_INTERVAL 'seconds...';
+        sleep $$BACKUP_INTERVAL;
+      done"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
-  uploads:
+  pgdata:    # PostgreSQL данные (персистентны)
+  uploads:   # Загруженные файлы (аватарки и т.д.)
