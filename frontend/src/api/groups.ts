@@ -30,6 +30,9 @@ export const groupsApi = {
   // Members
   removeMember: (groupId: string, userId: string) =>
     apiClient.delete(`/groups/${groupId}/members/${userId}`),
+
+  leaveGroup: (groupId: string) =>
+    apiClient.delete(`/groups/${groupId}/members/me`),
 };
 
 export const joinApi = {

@@ -207,3 +207,11 @@ class ProfileUpdateSchema(BaseModel):
 class ChangePasswordSchema(BaseModel):
     currentPassword: str
     newPassword: str = Field(min_length=8)
+
+
+class RegisterResponseSchema(BaseModel):
+    message: str
+
+
+class ResendVerificationSchema(BaseModel):
+    email: EmailStr

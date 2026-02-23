@@ -222,9 +222,9 @@ def get_availability_overlaps(
     # Get total member count
     member_count = db.query(models.Membership).filter(models.Membership.groupId == group_id).count()
 
-    # Default min_players to 75% of members
+    # Default min_players to 2 (at least 2 players must overlap)
     if min_players is None:
-        min_players = max(1, int(member_count * 0.75))
+        min_players = 2
 
     # Get all availability entries for the group
     query = (
@@ -278,45 +278,70 @@ def get_availability_overlaps(
 
             current_date += timedelta(days=1)
 
-    # Find dates with enough players
+    # Find dates with enough players using a sweep line algorithm.
+    # Instead of requiring ALL players on a date to overlap simultaneously,
+    # we find the best time segment where the maximum number of players overlap.
     suggestions = []
 
     for day, players_dict in dates_availability.items():
-        player_count = len(players_dict)
+        if len(players_dict) < min_players:
+            continue
 
-        if player_count >= min_players:
-            # Get time range for this date
-            all_starts = [p['start'] for p in players_dict.values()]
-            all_ends = [p['end'] for p in players_dict.values()]
+        # Build sweep line events: end events (type=0) sort before start events (type=1)
+        # at the same timestamp so we don't count a player leaving and joining at the
+        # exact same moment as an overlap.
+        events = []
+        for user_id, player_data in players_dict.items():
+            events.append((player_data['start'], 1, user_id, player_data['user']))  # start
+            events.append((player_data['end'], 0, user_id, player_data['user']))   # end
 
-            # For the suggested window, use the intersection:
-            # Latest start time (when last person becomes available)
-            # Earliest end time (when first person leaves)
-            latest_start = max(all_starts)
-            earliest_end = min(all_ends)
+        events.sort(key=lambda x: (x[0], x[1]))
 
-            # Make sure there's actually an overlap
-            if latest_start < earliest_end:
-                duration_minutes = (earliest_end - latest_start).total_seconds() / 60
+        active_players = {}
+        prev_time = None
+        best_window = None
 
-                # Check if overlap meets minimum duration requirement
-                if duration_minutes >= duration_hours * 60:
-                    suggestions.append({
-                        "date": day.isoformat(),
-                        "startDateTime": latest_start.isoformat(),
-                        "endDateTime": earliest_end.isoformat(),
-                        "playerCount": player_count,
-                        "duration_hours": duration_minutes / 60,
-                        "availablePlayers": [
-                            {
-                                "id": p['user'].id,
-                                "name": p['user'].name,
-                                "email": p['user'].email,
-                                "image": p['user'].image,
-                            }
-                            for p in players_dict.values()
-                        ],
-                    })
+        for time, event_type, user_id, user in events:
+            if prev_time is not None and active_players and prev_time < time:
+                count = len(active_players)
+                duration_mins = (time - prev_time).total_seconds() / 60
+
+                if count >= min_players and duration_mins >= duration_hours * 60:
+                    if (best_window is None
+                            or count > best_window['count']
+                            or (count == best_window['count'] and duration_mins > best_window['duration_mins'])):
+                        best_window = {
+                            'start': prev_time,
+                            'end': time,
+                            'players': dict(active_players),
+                            'count': count,
+                            'duration_mins': duration_mins,
+                        }
+
+            if event_type == 1:  # start
+                active_players[user_id] = user
+            else:               # end
+                active_players.pop(user_id, None)
+
+            prev_time = time
+
+        if best_window:
+            suggestions.append({
+                "date": day.isoformat(),
+                "startDateTime": best_window['start'].isoformat(),
+                "endDateTime": best_window['end'].isoformat(),
+                "playerCount": best_window['count'],
+                "duration_hours": best_window['duration_mins'] / 60,
+                "availablePlayers": [
+                    {
+                        "id": u.id,
+                        "name": u.name,
+                        "email": u.email,
+                        "image": u.image,
+                    }
+                    for u in best_window['players'].values()
+                ],
+            })
 
     # Sort by player count (desc), duration (desc), then date (asc)
     suggestions.sort(key=lambda x: (-x["playerCount"], -x["duration_hours"], x["date"]))

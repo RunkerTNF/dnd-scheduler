@@ -3,9 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authApi } from '../../api/auth';
-import { useAuthStore } from '../../store/authStore';
 import Input from '../ui/Input';
 import PasswordInput from '../ui/PasswordInput';
 import Button from '../ui/Button';
@@ -23,10 +21,8 @@ const registerSchema = z.object({
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterForm() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const setAuth = useAuthStore((state) => state.setAuth);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [sentEmail, setSentEmail] = useState<string | null>(null);
 
   const {
     register,
@@ -38,14 +34,21 @@ export default function RegisterForm() {
 
   const registerMutation = useMutation({
     mutationFn: authApi.register,
-    onSuccess: (response) => {
-      setAuth(response.data.user, response.data.accessToken);
-      const redirectTo = searchParams.get('redirect') || '/groups';
-      navigate(redirectTo);
+    onSuccess: (_response, variables) => {
+      setSentEmail(variables.email);
     },
     onError: (error: any) => {
-      setServerError(error.response?.data?.detail || 'Не удалось зарегистрироваться');
+      const detail = error.response?.data?.detail;
+      if (detail === 'email_exists') {
+        setServerError('Аккаунт с таким email уже существует');
+      } else {
+        setServerError(detail || 'Не удалось зарегистрироваться');
+      }
     },
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: () => authApi.resendVerification(sentEmail!),
   });
 
   const onSubmit = (data: RegisterFormData) => {
@@ -58,6 +61,30 @@ export default function RegisterForm() {
     e.preventDefault();
     handleSubmit(onSubmit)(e);
   };
+
+  if (sentEmail) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-md bg-green-50 p-4">
+          <p className="text-sm font-medium text-green-800">Письмо отправлено!</p>
+          <p className="mt-1 text-sm text-green-700">
+            Проверьте почту <span className="font-semibold">{sentEmail}</span> и перейдите по ссылке для подтверждения.
+          </p>
+        </div>
+        <p className="text-sm text-gray-500">
+          Не пришло письмо?{' '}
+          <button
+            type="button"
+            onClick={() => resendMutation.mutate()}
+            disabled={resendMutation.isPending || resendMutation.isSuccess}
+            className="text-indigo-600 hover:underline disabled:opacity-50"
+          >
+            {resendMutation.isSuccess ? 'Отправлено!' : 'Отправить повторно'}
+          </button>
+        </p>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleFormSubmit} className="space-y-4">

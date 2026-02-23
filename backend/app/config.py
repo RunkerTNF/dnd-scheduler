@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24
     google_client_id: str | None = None
+    resend_api_key: str = ""
+    frontend_url: str = "http://localhost:5173"
 
     model_config = ConfigDict(
         env_file=Path(__file__).resolve().parents[2] / ".env",

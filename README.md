@@ -16,7 +16,7 @@
 | Слой | Технологии |
 |------|-----------|
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS 3, React Router, TanStack Query, Zustand, react-big-calendar, Headless UI |
-| Backend | Python 3.11, FastAPI, SQLAlchemy 2, Alembic, PostgreSQL, JWT (python-jose), bcrypt |
+| Backend | Python 3.11, FastAPI, SQLAlchemy 2, Alembic, PostgreSQL, JWT (python-jose), bcrypt, uv |
 | Инфра | Docker, Docker Compose, Nginx |
 
 ## Структура проекта
@@ -38,7 +38,8 @@ dnd_scheduler/
 │   ├── migrations/           # Alembic миграции
 │   ├── uploads/              # Загруженные файлы (аватарки)
 │   ├── Dockerfile
-│   └── requirements.txt
+│   ├── pyproject.toml        # Зависимости (источник истины для uv)
+│   └── requirements.txt      # Замороженные зависимости для Docker (uv export)
 ├── frontend/
 │   ├── src/
 │   │   ├── api/              # Axios клиенты (auth, groups, events, availability, users)
@@ -113,15 +114,17 @@ dnd_scheduler/
 
 2. Backend:
    ```bash
-   python -m venv .venv
-   .venv\Scripts\activate          # Windows
-   # source .venv/bin/activate     # Linux/Mac
-   pip install -r backend/requirements.txt
-
    cd backend
-   alembic upgrade head
-   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+   uv sync                   # создаёт .venv, устанавливает зависимости, генерирует uv.lock
+   uv run alembic upgrade head
+   uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
    ```
+
+   > **Обновление зависимостей**: редактируй `backend/pyproject.toml`, затем:
+   > ```bash
+   > uv lock
+   > uv export --frozen --no-dev -o requirements.txt   # обновляет requirements.txt для Docker
+   > ```
 
 3. Frontend:
    ```bash

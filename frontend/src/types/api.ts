@@ -23,6 +23,10 @@ export interface AuthResponse {
   user: User;
 }
 
+export interface RegisterResponse {
+  message: string;
+}
+
 // Group types
 export interface GroupCreateRequest {
   name: string;

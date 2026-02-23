@@ -27,6 +27,7 @@ class User(Base):
 
     memberships: Mapped[list["Membership"]] = relationship(back_populates="user")
     groupsOwned: Mapped[list["Group"]] = relationship(back_populates="owner", foreign_keys="Group.ownerId")
+    verificationTokens: Mapped[list["EmailVerificationToken"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class Group(Base):
@@ -100,7 +101,7 @@ class Availability(Base):
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
     )
 
-    user: Mapped[User] = relationship()
+    user: Mapped["User"] = relationship()
     group: Mapped[Group] = relationship(back_populates="availabilities")
 
 
@@ -111,3 +112,15 @@ class BlacklistedToken(Base):
     tokenHash: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
     expiresAt: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class EmailVerificationToken(Base):
+    __tablename__ = "EmailVerificationToken"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
+    userId: Mapped[str] = mapped_column(String, ForeignKey("User.id", ondelete="CASCADE"), nullable=False)
+    token: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
+    expiresAt: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user: Mapped[User] = relationship(back_populates="verificationTokens")

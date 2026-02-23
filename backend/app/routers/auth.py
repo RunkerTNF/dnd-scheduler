@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -18,16 +19,17 @@ from app.auth import (
 )
 from app.config import Settings, get_settings
 from app.database import get_db
+from app.email import send_verification_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=schemas.AuthResponseSchema, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=schemas.RegisterResponseSchema, status_code=status.HTTP_201_CREATED)
 def register(
     payload: schemas.RegisterRequestSchema,
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
-) -> schemas.AuthResponseSchema:
+) -> schemas.RegisterResponseSchema:
     existing = db.query(models.User).filter(models.User.email == payload.email).one_or_none()
     if existing is not None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="email_exists")
@@ -38,11 +40,20 @@ def register(
         passwordHash=get_password_hash(payload.password),
     )
     db.add(user)
-    db.commit()
-    db.refresh(user)
+    db.flush()  # get user.id without committing
 
-    token = create_access_token(user=user, settings=settings)
-    return schemas.AuthResponseSchema(accessToken=token, tokenType="bearer", user=user)
+    token_value = str(uuid4())
+    verification_token = models.EmailVerificationToken(
+        userId=user.id,
+        token=token_value,
+        expiresAt=datetime.utcnow() + timedelta(hours=24),
+    )
+    db.add(verification_token)
+    db.commit()
+
+    send_verification_email(user.email, token_value, settings)
+
+    return schemas.RegisterResponseSchema(message="verification_email_sent")
 
 
 @router.post("/login", response_model=schemas.AuthResponseSchema)
@@ -56,6 +67,9 @@ def login(
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_credentials")
 
+    if user.emailVerified is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="email_not_verified")
+
     token = create_access_token(user=user, settings=settings)
     return schemas.AuthResponseSchema(accessToken=token, tokenType="bearer", user=user)
 
@@ -68,7 +82,7 @@ def login_for_swagger(
 ) -> schemas.OAuth2TokenSchema:
     """
     OAuth2 compatible token login (for Swagger UI).
-    
+
     Use email as username. client_id and client_secret are not required.
     """
     user = authenticate_user(db, form_data.username, form_data.password)
@@ -103,6 +117,61 @@ def login_with_google(
     return schemas.AuthResponseSchema(accessToken=token, tokenType="bearer", user=user)
 
 
+@router.get("/verify-email", response_model=schemas.AuthResponseSchema)
+def verify_email(
+    token: str = Query(...),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> schemas.AuthResponseSchema:
+    verification = (
+        db.query(models.EmailVerificationToken)
+        .filter(models.EmailVerificationToken.token == token)
+        .one_or_none()
+    )
+    if verification is None or verification.expiresAt < datetime.utcnow():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_or_expired_token")
+
+    user = verification.user
+    user.emailVerified = datetime.utcnow()
+    db.delete(verification)
+    db.commit()
+    db.refresh(user)
+
+    access_token = create_access_token(user=user, settings=settings)
+    return schemas.AuthResponseSchema(accessToken=access_token, tokenType="bearer", user=user)
+
+
+@router.post("/resend-verification", response_model=schemas.RegisterResponseSchema)
+def resend_verification(
+    payload: schemas.ResendVerificationSchema,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> schemas.RegisterResponseSchema:
+    user = db.query(models.User).filter(models.User.email == payload.email).one_or_none()
+
+    # Don't leak whether the email exists or is already verified
+    if user is None or user.emailVerified is not None:
+        return schemas.RegisterResponseSchema(message="verification_email_sent")
+
+    # Delete old tokens
+    db.query(models.EmailVerificationToken).filter(
+        models.EmailVerificationToken.userId == user.id
+    ).delete()
+
+    token_value = str(uuid4())
+    verification_token = models.EmailVerificationToken(
+        userId=user.id,
+        token=token_value,
+        expiresAt=datetime.utcnow() + timedelta(hours=24),
+    )
+    db.add(verification_token)
+    db.commit()
+
+    send_verification_email(user.email, token_value, settings)
+
+    return schemas.RegisterResponseSchema(message="verification_email_sent")
+
+
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(
     request: Request,
@@ -111,15 +180,13 @@ def logout(
     settings: Settings = Depends(get_settings),
 ):
     """Add token to blacklist to invalidate it."""
-    # Get token from Authorization header
     authorization = request.headers.get("Authorization")
     if not authorization or not authorization.startswith("Bearer "):
         return
-    
+
     token = authorization.removeprefix("Bearer ")
     token_hash = get_token_hash(token)
-    
-    # Check if token is already blacklisted
+
     existing = (
         db.query(models.BlacklistedToken)
         .filter(models.BlacklistedToken.tokenHash == token_hash)
@@ -127,8 +194,7 @@ def logout(
     )
     if existing is not None:
         return  # Already blacklisted, nothing to do
-    
-    # Decode token to get expiration time
+
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         exp_timestamp = payload.get("exp")
@@ -138,8 +204,7 @@ def logout(
             expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
     except JWTError:
         expires_at = datetime.now(timezone.utc) + timedelta(days=1)
-    
-    # Add token to blacklist
+
     blacklisted_token = models.BlacklistedToken(
         tokenHash=token_hash,
         expiresAt=expires_at,

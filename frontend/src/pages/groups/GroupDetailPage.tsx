@@ -53,6 +53,13 @@ export default function GroupDetailPage() {
   const [eventInitialEnd, setEventInitialEnd] = useState<Date | undefined>();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
+  const leaveGroupMutation = useMutation({
+    mutationFn: () => groupsApi.leaveGroup(groupId!),
+    onSuccess: () => {
+      navigate("/groups");
+    },
+  });
+
   const handleNavigate = useCallback((newDate: Date) => setDate(newDate), []);
 
   const { data: group, isLoading } = useQuery({
@@ -289,29 +296,43 @@ export default function GroupDetailPage() {
               <p className="mt-2 text-gray-600">{group.description}</p>
             )}
           </div>
-          {isOwner && (
-            <div className="flex gap-2">
+          <div className="flex gap-2">
+            {isOwner ? (
+              <>
+                <button
+                  onClick={() => {
+                    setEventModalMode("create");
+                    setEventModalData(null);
+                    setEventInitialStart(undefined);
+                    setEventInitialEnd(undefined);
+                    setEventModalOpen(true);
+                  }}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Назначить игру
+                </button>
+                <button
+                  onClick={() => setDeleteModalOpen(true)}
+                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  title="Удалить группу"
+                >
+                  <TrashIcon className="h-5 w-5" />
+                </button>
+              </>
+            ) : (
               <button
                 onClick={() => {
-                  setEventModalMode("create");
-                  setEventModalData(null);
-                  setEventInitialStart(undefined);
-                  setEventInitialEnd(undefined);
-                  setEventModalOpen(true);
+                  if (confirm(`Покинуть группу «${group.name}»?`)) {
+                    leaveGroupMutation.mutate();
+                  }
                 }}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                disabled={leaveGroupMutation.isPending}
+                className="inline-flex items-center px-4 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
               >
-                Назначить игру
+                Покинуть группу
               </button>
-              <button
-                onClick={() => setDeleteModalOpen(true)}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                title="Удалить группу"
-              >
-                <TrashIcon className="h-5 w-5" />
-              </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 

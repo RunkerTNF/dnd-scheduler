@@ -14,7 +14,16 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Change Group.name column type from String to String(35)
+    # First, truncate any existing group names longer than 35 characters
+    op.execute(
+        """
+        UPDATE "Group"
+        SET name = SUBSTRING(name FROM 1 FOR 35)
+        WHERE LENGTH(name) > 35
+        """
+    )
+
+    # Then change Group.name column type from String to String(35)
     op.alter_column(
         "Group",
         "name",

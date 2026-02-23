@@ -16,7 +16,7 @@ export default function SuggestedDatesSidebar({ groupId, memberCount, isOwner, o
     queryKey: ['availability-overlaps', groupId],
     queryFn: async () => {
       const response = await availabilityApi.getOverlaps(groupId, {
-        min_players: Math.ceil(memberCount * 0.75),
+        min_players: 2,
         duration_hours: 3,
       });
       return response.data;
