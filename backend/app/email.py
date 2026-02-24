@@ -33,7 +33,7 @@ def send_verification_email(to_email: str, token: str, settings: Settings) -> No
     """
 
     resend.Emails.send({
-        "from": "DnD Scheduler <noreply@runker.ru>",
+        "from": "DnD Scheduler <noreply@registering.runker.ru>",
         "to": [to_email],
         "subject": "Подтвердите ваш email — DnD Scheduler",
         "html": html_body,
