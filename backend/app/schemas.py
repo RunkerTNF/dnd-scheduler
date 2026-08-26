@@ -132,6 +132,15 @@ class LoginRequestSchema(BaseModel):
     password: str
 
 
+class ForgotPasswordSchema(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordSchema(BaseModel):
+    token: str = Field(min_length=1)
+    password: str = Field(min_length=8)
+
+
 class TokenSchema(BaseModel):
     accessToken: str
     tokenType: str = "bearer"

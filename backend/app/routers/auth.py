@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -18,9 +19,12 @@ from app.auth import (
 )
 from app.config import Settings, get_settings
 from app.database import get_db
-from app.email import send_verification_email
+from app.email import send_password_reset_email, send_verification_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+PASSWORD_RESET_TTL = timedelta(hours=1)
+PASSWORD_RESET_RESEND_INTERVAL = timedelta(minutes=5)
 
 
 @router.post("/register", response_model=schemas.RegisterResponseSchema, status_code=status.HTTP_201_CREATED)
@@ -186,3 +190,85 @@ def logout(
     )
     db.add(blacklisted_token)
     db.commit()
+
+
+@router.post("/forgot-password", response_model=schemas.RegisterResponseSchema)
+def forgot_password(
+    payload: schemas.ForgotPasswordSchema,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> schemas.RegisterResponseSchema:
+    """Выслать ссылку на установку пароля.
+
+    Ответ одинаков независимо от того, есть такой пользователь или нет — иначе
+    ручка превращается в способ проверять чужие адреса на регистрацию.
+    """
+    ok = schemas.RegisterResponseSchema(message="password_reset_email_sent")
+
+    user = db.query(models.User).filter(models.User.email == payload.email).one_or_none()
+    if user is None:
+        return ok
+
+    now = datetime.utcnow()
+    recent = (
+        db.query(models.PasswordResetToken)
+        .filter(
+            models.PasswordResetToken.userId == user.id,
+            models.PasswordResetToken.usedAt.is_(None),
+            models.PasswordResetToken.createdAt > now - PASSWORD_RESET_RESEND_INTERVAL,
+        )
+        .first()
+    )
+    if recent is not None:
+        # Свежее письмо уже ушло: не засыпаем почту и не жжём квоту Resend
+        return ok
+
+    db.query(models.PasswordResetToken).filter(
+        models.PasswordResetToken.userId == user.id
+    ).delete()
+
+    token_value = secrets.token_urlsafe(32)
+    db.add(
+        models.PasswordResetToken(
+            userId=user.id,
+            token=token_value,
+            expiresAt=now + PASSWORD_RESET_TTL,
+        )
+    )
+    db.commit()
+
+    send_password_reset_email(user.email, token_value, settings)
+
+    return ok
+
+
+@router.post("/reset-password", response_model=schemas.AuthResponseSchema)
+def reset_password(
+    payload: schemas.ResetPasswordSchema,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> schemas.AuthResponseSchema:
+    reset_token = (
+        db.query(models.PasswordResetToken)
+        .filter(models.PasswordResetToken.token == payload.token)
+        .one_or_none()
+    )
+
+    now = datetime.utcnow()
+    if reset_token is None or reset_token.usedAt is not None or reset_token.expiresAt < now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="invalid_or_expired_token",
+        )
+
+    user = reset_token.user
+    user.passwordHash = get_password_hash(payload.password)
+    if user.emailVerified is None:
+        # Переход по ссылке из письма и есть подтверждение владения почтой
+        user.emailVerified = now
+    reset_token.usedAt = now
+    db.commit()
+    db.refresh(user)
+
+    access_token = create_access_token(user=user, settings=settings)
+    return schemas.AuthResponseSchema(accessToken=access_token, tokenType="bearer", user=user)

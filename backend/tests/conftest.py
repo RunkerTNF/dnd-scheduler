@@ -86,6 +86,9 @@ def sent_emails(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, str]]:
     monkeypatch.setattr(
         "app.routers.auth.send_verification_email", _capture("verification")
     )
+    monkeypatch.setattr(
+        "app.routers.auth.send_password_reset_email", _capture("reset")
+    )
     return captured
 
 
