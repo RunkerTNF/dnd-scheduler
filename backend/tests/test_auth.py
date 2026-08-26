@@ -19,24 +19,18 @@ class TestRegister:
         self, client: TestClient, db: Session, test_user_data: dict[str, Any]
     ):
         """Test successful user registration."""
-        response = client.post("/auth/register", json=test_user_data)
+        response = client.post("/api/auth/register", json=test_user_data)
         
         assert response.status_code == 201
-        data = response.json()
-        assert "accessToken" in data
-        assert data["tokenType"] == "bearer"
-        assert data["user"]["email"] == test_user_data["email"]
-        assert data["user"]["name"] == test_user_data["name"]
-        assert "id" in data["user"]
-        
-        # Verify user in database
+        assert response.json() == {"message": "verification_email_sent"}
+
         db_user = db.query(models.User).filter(
-            models.User.id == data["user"]["id"]
+            models.User.email == test_user_data["email"]
         ).one_or_none()
-        
+
         assert db_user is not None
-        assert db_user.email == test_user_data["email"]
         assert db_user.name == test_user_data["name"]
+        assert db_user.emailVerified is None
         assert db_user.passwordHash is not None
         assert verify_password(test_user_data["password"], db_user.passwordHash)
 
@@ -45,10 +39,10 @@ class TestRegister:
     ):
         """Test registration with existing email fails."""
         # Register first user
-        client.post("/auth/register", json=test_user_data)
+        client.post("/api/auth/register", json=test_user_data)
         
         # Try to register with same email
-        response = client.post("/auth/register", json=test_user_data)
+        response = client.post("/api/auth/register", json=test_user_data)
         
         assert response.status_code == 400
         assert response.json()["detail"] == "email_exists"
@@ -62,7 +56,7 @@ class TestRegister:
     def test_register_invalid_email(self, client: TestClient, db: Session):
         """Test registration with invalid email fails."""
         response = client.post(
-            "/auth/register",
+            "/api/auth/register",
             json={
                 "email": "not-an-email",
                 "password": "testpassword123",
@@ -79,7 +73,7 @@ class TestRegister:
     def test_register_short_password(self, client: TestClient, db: Session):
         """Test registration with short password fails."""
         response = client.post(
-            "/auth/register",
+            "/api/auth/register",
             json={
                 "email": "test@example.com",
                 "password": "short",
@@ -96,7 +90,7 @@ class TestRegister:
     def test_register_without_name(self, client: TestClient, db: Session):
         """Test registration without name succeeds (name is optional)."""
         response = client.post(
-            "/auth/register",
+            "/api/auth/register",
             json={
                 "email": "test@example.com",
                 "password": "testpassword123",
@@ -104,7 +98,7 @@ class TestRegister:
         )
         
         assert response.status_code == 201
-        assert response.json()["user"]["name"] is None
+        assert response.json() == {"message": "verification_email_sent"}
         
         # Verify user in database
         db_user = db.query(models.User).filter(
@@ -123,7 +117,7 @@ class TestLogin:
     ):
         """Test successful login."""
         response = client.post(
-            "/auth/login",
+            "/api/auth/login",
             json={
                 "email": registered_user["email"],
                 "password": registered_user["password"],
@@ -150,7 +144,7 @@ class TestLogin:
     ):
         """Test login with wrong password fails."""
         response = client.post(
-            "/auth/login",
+            "/api/auth/login",
             json={
                 "email": registered_user["email"],
                 "password": "wrongpassword",
@@ -163,7 +157,7 @@ class TestLogin:
     def test_login_nonexistent_user(self, client: TestClient, db: Session):
         """Test login with nonexistent email fails."""
         response = client.post(
-            "/auth/login",
+            "/api/auth/login",
             json={
                 "email": "nonexistent@example.com",
                 "password": "testpassword123",
@@ -182,7 +176,7 @@ class TestLogin:
     def test_login_invalid_email_format(self, client: TestClient):
         """Test login with invalid email format fails."""
         response = client.post(
-            "/auth/login",
+            "/api/auth/login",
             json={
                 "email": "not-an-email",
                 "password": "testpassword123",
@@ -200,7 +194,7 @@ class TestOAuth2Token:
     ):
         """Test successful OAuth2 token request."""
         response = client.post(
-            "/auth/token",
+            "/api/auth/token",
             data={
                 "username": registered_user["email"],
                 "password": registered_user["password"],
@@ -223,7 +217,7 @@ class TestOAuth2Token:
     ):
         """Test OAuth2 token request with wrong password fails."""
         response = client.post(
-            "/auth/token",
+            "/api/auth/token",
             data={
                 "username": registered_user["email"],
                 "password": "wrongpassword",
@@ -246,7 +240,7 @@ class TestLogout:
         blacklisted_count_before = db.query(models.BlacklistedToken).count()
         assert blacklisted_count_before == 0
         
-        response = client.post("/auth/logout", headers=headers)
+        response = client.post("/api/auth/logout", headers=headers)
         
         assert response.status_code == 204
         
@@ -271,10 +265,10 @@ class TestLogout:
         headers = {"Authorization": f"Bearer {registered_user['accessToken']}"}
         
         # Logout
-        client.post("/auth/logout", headers=headers)
+        client.post("/api/auth/logout", headers=headers)
         
         # Try to use the same token
-        response = client.get("/groups/", headers=headers)
+        response = client.get("/api/groups/", headers=headers)
         
         assert response.status_code == 401
         
@@ -288,7 +282,7 @@ class TestLogout:
 
     def test_logout_without_token(self, client: TestClient, db: Session):
         """Test logout without token fails."""
-        response = client.post("/auth/logout")
+        response = client.post("/api/auth/logout")
         
         assert response.status_code == 401
         
@@ -303,7 +297,7 @@ class TestLogout:
         headers = {"Authorization": f"Bearer {registered_user['accessToken']}"}
         
         # First logout
-        response1 = client.post("/auth/logout", headers=headers)
+        response1 = client.post("/api/auth/logout", headers=headers)
         assert response1.status_code == 204
         
         # Verify one blacklisted token
@@ -311,7 +305,7 @@ class TestLogout:
         assert blacklisted_count == 1
         
         # Second logout with same token should fail (token already blacklisted)
-        response2 = client.post("/auth/logout", headers=headers)
+        response2 = client.post("/api/auth/logout", headers=headers)
         assert response2.status_code == 401
         
         # Verify still only one blacklisted token (no duplicate)
@@ -326,7 +320,7 @@ class TestProtectedEndpoints:
         self, client: TestClient, db: Session, auth_headers: dict[str, str]
     ):
         """Test accessing protected endpoint with valid token."""
-        response = client.get("/groups/", headers=auth_headers)
+        response = client.get("/api/groups/", headers=auth_headers)
         
         assert response.status_code == 200
         
@@ -336,7 +330,7 @@ class TestProtectedEndpoints:
 
     def test_access_protected_endpoint_without_token(self, client: TestClient, db: Session):
         """Test accessing protected endpoint without token fails."""
-        response = client.get("/groups/")
+        response = client.get("/api/groups/")
         
         assert response.status_code == 401
 
@@ -346,7 +340,7 @@ class TestProtectedEndpoints:
         """Test accessing protected endpoint with invalid token fails."""
         headers = {"Authorization": "Bearer invalid_token"}
         
-        response = client.get("/groups/", headers=headers)
+        response = client.get("/api/groups/", headers=headers)
         
         assert response.status_code == 401
         
@@ -358,7 +352,7 @@ class TestProtectedEndpoints:
         """Test accessing protected endpoint with malformed auth header fails."""
         headers = {"Authorization": "NotBearer token"}
         
-        response = client.get("/groups/", headers=headers)
+        response = client.get("/api/groups/", headers=headers)
         
         assert response.status_code == 401
 
@@ -386,7 +380,7 @@ class TestTokenExpiration:
         )
         
         headers = {"Authorization": f"Bearer {expired_token}"}
-        response = client.get("/groups/", headers=headers)
+        response = client.get("/api/groups/", headers=headers)
         
         assert response.status_code == 401
 
@@ -397,7 +391,7 @@ class TestGoogleAuth:
     def test_google_auth_not_configured(self, client: TestClient, db: Session):
         """Test Google auth returns 503 when not configured."""
         response = client.post(
-            "/auth/google",
+            "/api/auth/google",
             json={"idToken": "some_google_token"},
         )
         
