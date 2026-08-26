@@ -151,6 +151,8 @@ from app.config import Settings, get_settings
 
 Run: `sed -i 's|"/auth/|"/api/auth/|g; s|"/groups/"|"/api/groups/"|g' tests/test_auth.py`
 
+Команда не идемпотентна: повторный запуск даст `/api/api/auth/`. Если сомневаетесь, прошла ли она, проверьте `grep -c '"/api/auth/' tests/test_auth.py` вместо повторного вызова.
+
 - [ ] **Step 4: Поправить тесты регистрации под новый ответ**
 
 Регистрация возвращает `{"message": "verification_email_sent"}` со статусом 201 и требует подтверждения почты. В `tests/test_auth.py` заменить тело `test_register_success` (всё после строки с `response = client.post("/api/auth/register", json=test_user_data)`) на:
@@ -222,10 +224,10 @@ class GoogleAuthRequestSchema(BaseModel):
 
 - [ ] **Step 2: Убрать зависимости**
 
-В `backend/pyproject.toml` удалить строки `"google-auth>=2.29",` и `"requests>=2.32",`. Прямых импортов `requests` в `app/` нет, он стоял ради google-auth transport.
+В `backend/pyproject.toml` удалить строки `"google-auth>=2.29",` и `"requests>=2.32",`. Прямых импортов `requests` в `app/` нет; сам пакет никуда не денется — `resend` объявляет `requests>=2.31.0` своей зависимостью, так что он останется транзитивно.
 
 Run: `uv sync`
-Expected: пересобранное окружение без ошибок.
+Expected: пересобранное окружение без ошибок, `uv.lock` обновился.
 
 - [ ] **Step 3: Поправить текст ошибки в users.py**
 
@@ -307,9 +309,13 @@ Expected: сборка проходит, ошибок TypeScript нет.
 
 - [ ] **Step 9: Commit**
 
+`backend/uv.lock` не в `.gitignore` и до сих пор не коммитился, хотя `uv sync` его переписывает. Он относится к этой задаче, но заезжает отдельным коммитом — чтобы решение «начать версионировать lock-файл» не пряталось внутри удаления Google. Никаких `git add -A`.
+
 ```bash
-git add -A
+git add backend/app backend/tests backend/pyproject.toml frontend/src frontend/package.json frontend/package-lock.json frontend/Dockerfile .docker/docker-compose.yml .docker/docker-compose.prod.yml
 git commit -m "remove: убрал авторизацию через Google"
+git add backend/uv.lock
+git commit -m "add: зафиксировал uv.lock в репозитории"
 ```
 
 ---
@@ -737,7 +743,9 @@ class TestResetPassword:
 - [ ] **Step 2: Убедиться, что тесты падают**
 
 Run: `uv run pytest tests/test_password_reset.py -q 2>&1 | tail -5`
-Expected: FAIL — `app.routers.auth` не имеет атрибута `send_password_reset_email`, ручек `/api/auth/forgot-password` и `/api/auth/reset-password` нет (404).
+Expected: FAIL — `app.routers.auth` не имеет атрибута `send_password_reset_email`.
+
+Фикстура `sent_emails` объявлена `autouse`, поэтому на этом шаге с `AttributeError` падает **весь** набор, а не только новый файл. Это ожидаемо и лечится Step 4; полный `pytest` до конца задачи не запускать.
 
 - [ ] **Step 3: Добавить схемы**
 
@@ -2116,6 +2124,18 @@ YANDEX_CLIENT_SECRET=<client_secret из кабинета oauth.yandex.ru>
 
 Значения подставляются вручную из кабинета Яндекса, в репозиторий не коммитятся.
 
+То же самое в `.docker/.env.example` — заменить блок `# Google OAuth Client ID` с `GOOGLE_CLIENT_ID` на:
+
+```
+# Яндекс ID
+# ClientID публичный, попадает в сборку фронта
+YANDEX_CLIENT_ID=your-yandex-client-id
+# Client secret используется только бэкендом, наружу не уходит
+YANDEX_CLIENT_SECRET=your-yandex-client-secret
+```
+
+Файл игнорируется гитом, но именно он служит образцом для боевого `.docker/.env`.
+
 - [ ] **Step 2: Обновить README.md**
 
 - строка 7: `- Регистрация / авторизация (email + Google OAuth)` → `- Регистрация / авторизация (email + Яндекс ID)`
@@ -2174,8 +2194,10 @@ Expected: остались только упоминания Google Calendar в 
 
 - [ ] **Step 7: Commit**
 
+`.env` и `.docker/.env.example` игнорируются гитом (`.gitignore:2-4`), в коммит попадает только документация.
+
 ```bash
-git add -A
+git add README.md frontend/README.md .docker/README-PROD.md DEPLOYMENT-NGINX.md
 git commit -m "docs: заменил Google на Яндекс ID в документации и переменных"
 ```
 
@@ -2185,7 +2207,7 @@ git commit -m "docs: заменил Google на Яндекс ID в докуме�
 
 Автотесты покрывают бэкенд, но живой OAuth-редирект и почту они не трогают. Перед мержем прогнать вручную:
 
-1. Поднять локально бэкенд и фронт, в `.env` подставить боевые `YANDEX_CLIENT_ID` и `YANDEX_CLIENT_SECRET`, фронт запустить с `VITE_YANDEX_CLIENT_ID`.
+1. Поднять локально бэкенд под живым uvicorn (не только TestClient) и фронт: в `.env` подставить боевые `YANDEX_CLIENT_ID` и `YANDEX_CLIENT_SECRET`, фронт запустить с `VITE_YANDEX_CLIENT_ID` и с `npm run dev -- --host 127.0.0.1` — по умолчанию Vite слушает `[::1]` и снаружи оказывается недоступен.
 2. Нажать «Войти с Яндекс ID» → авторизоваться → убедиться, что вернуло в `/groups` и профиль подтянулся с именем и аватаркой.
 3. Повторить вход тем же аккаунтом — второй пользователь создаваться не должен.
 4. На странице входа нажать «Забыли пароль?», ввести свой адрес, дождаться письма, перейти по ссылке, задать пароль, войти с ним.
@@ -2196,9 +2218,12 @@ git commit -m "docs: заменил Google на Яндекс ID в докуме�
 
 ## Порядок выката
 
-1. Прогнать `alembic upgrade head`, выкатить релиз
-2. `--dry-run` рассылки, сверка списка
-3. Боевой прогон рассылки
+1. **На VPS в `.docker/.env` добавить `YANDEX_CLIENT_ID` и `YANDEX_CLIENT_SECRET`, убрать `GOOGLE_CLIENT_ID`.** Compose подставляет `${YANDEX_CLIENT_ID}` в build-arg фронта именно оттуда. Если переменной не будет, сборка не упадёт: `YandexLoginButton` при пустом client id возвращает `null`, и кнопка просто исчезнет со страницы входа без единой ошибки в логах.
+2. Пересобрать образ фронта — client id вшивается на этапе сборки, перезапуска контейнера недостаточно.
+3. Прогнать `alembic upgrade head`, выкатить релиз.
+4. Проверить, что кнопка «Войти с Яндекс ID» видна на `/login`, и пройти вход живым аккаунтом.
+5. `--dry-run` рассылки, сверка списка адресов.
+6. Боевой прогон рассылки.
 
-Шаги 1-3 идут подряд, в одно окно: с момента выката и до рассылки бывшие
+Шаги идут подряд, в одно окно: с момента выката и до рассылки бывшие
 Google-юзеры войти не могут.
