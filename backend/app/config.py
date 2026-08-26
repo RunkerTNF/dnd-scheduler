@@ -10,7 +10,6 @@ class Settings(BaseSettings):
     secret_key: str = "change-me"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24
-    google_client_id: str | None = None
     resend_api_key: str = ""
     frontend_url: str = "http://localhost:5173"
 

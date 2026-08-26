@@ -132,10 +132,6 @@ class LoginRequestSchema(BaseModel):
     password: str
 
 
-class GoogleAuthRequestSchema(BaseModel):
-    idToken: str = Field(min_length=1)
-
-
 class TokenSchema(BaseModel):
     accessToken: str
     tokenType: str = "bearer"

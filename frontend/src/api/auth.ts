@@ -3,7 +3,6 @@ import type {
   LoginRequest,
   RegisterRequest,
   RegisterResponse,
-  GoogleAuthRequest,
   AuthResponse,
 } from '../types/api';
 
@@ -13,9 +12,6 @@ export const authApi = {
 
   login: (data: LoginRequest) =>
     apiClient.post<AuthResponse>('/auth/login', data),
-
-  googleAuth: (data: GoogleAuthRequest) =>
-    apiClient.post<AuthResponse>('/auth/google', data),
 
   verifyEmail: (token: string) =>
     apiClient.get<AuthResponse>(`/auth/verify-email?token=${encodeURIComponent(token)}`),

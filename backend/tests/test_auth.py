@@ -383,23 +383,3 @@ class TestTokenExpiration:
         response = client.get("/api/groups/", headers=headers)
         
         assert response.status_code == 401
-
-
-class TestGoogleAuth:
-    """Tests for Google OAuth authentication."""
-
-    def test_google_auth_not_configured(self, client: TestClient, db: Session):
-        """Test Google auth returns 503 when not configured."""
-        response = client.post(
-            "/api/auth/google",
-            json={"idToken": "some_google_token"},
-        )
-        
-        # Should return 503 if GOOGLE_CLIENT_ID is not set
-        assert response.status_code == 503
-        assert response.json()["detail"] == "google_auth_not_configured"
-        
-        # Verify no user was created
-        users_count = db.query(models.User).count()
-        assert users_count == 0
-

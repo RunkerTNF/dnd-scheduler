@@ -15,7 +15,6 @@ from app.auth import (
     get_current_user,
     get_password_hash,
     get_token_hash,
-    verify_google_identity_token,
 )
 from app.config import Settings, get_settings
 from app.database import get_db
@@ -91,30 +90,6 @@ def login_for_swagger(
 
     token = create_access_token(user=user, settings=settings)
     return schemas.OAuth2TokenSchema(access_token=token, token_type="bearer")
-
-
-@router.post("/google", response_model=schemas.AuthResponseSchema)
-def login_with_google(
-    payload: schemas.GoogleAuthRequestSchema,
-    db: Session = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-) -> schemas.AuthResponseSchema:
-    token_info = verify_google_identity_token(payload.idToken, settings)
-    email: str = token_info["email"]
-    user = db.query(models.User).filter(models.User.email == email).one_or_none()
-    if user is None:
-        user = models.User(
-            email=email,
-            name=token_info.get("name"),
-            image=token_info.get("picture"),
-            emailVerified=datetime.now(timezone.utc),
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-
-    token = create_access_token(user=user, settings=settings)
-    return schemas.AuthResponseSchema(accessToken=token, tokenType="bearer", user=user)
 
 
 @router.get("/verify-email", response_model=schemas.AuthResponseSchema)

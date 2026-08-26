@@ -76,7 +76,7 @@ def change_password(
     if not current_user.passwordHash:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Аккаунт создан через Google, пароль не установлен",
+            detail="Пароль не установлен. Задайте его через восстановление пароля на странице входа",
         )
 
     if not verify_password(payload.currentPassword, current_user.passwordHash):

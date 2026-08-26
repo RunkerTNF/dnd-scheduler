@@ -13,10 +13,6 @@ export interface RegisterRequest {
   name?: string;
 }
 
-export interface GoogleAuthRequest {
-  idToken: string;
-}
-
 export interface AuthResponse {
   accessToken: string;
   tokenType: string;

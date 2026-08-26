@@ -6,8 +6,6 @@ from typing import Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from google.auth.transport import requests as google_requests
-from google.oauth2 import id_token
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
@@ -102,32 +100,3 @@ def get_current_user(
         raise credentials_exception
 
     return user
-
-
-def verify_google_identity_token(id_token_value: str, settings: Settings) -> dict[str, object]:
-    if not settings.google_client_id:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="google_auth_not_configured",
-        )
-
-    try:
-        token_info = id_token.verify_oauth2_token(
-            id_token_value,
-            google_requests.Request(),
-            settings.google_client_id,
-        )
-    except ValueError as exc:  # token invalid or expired
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="invalid_google_token",
-        ) from exc
-
-    email = token_info.get("email")
-    if not email:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="google_email_missing")
-
-    if not token_info.get("email_verified", False):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="email_not_verified")
-
-    return token_info
