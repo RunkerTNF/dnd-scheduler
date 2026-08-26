@@ -17,6 +17,10 @@ export interface ForgotPasswordRequest {
   email: string;
 }
 
+export interface YandexAuthRequest {
+  code: string;
+}
+
 export interface ResetPasswordRequest {
   token: string;
   password: string;

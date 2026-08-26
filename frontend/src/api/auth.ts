@@ -5,6 +5,7 @@ import type {
   RegisterResponse,
   ForgotPasswordRequest,
   ResetPasswordRequest,
+  YandexAuthRequest,
   AuthResponse,
 } from '../types/api';
 
@@ -14,6 +15,9 @@ export const authApi = {
 
   login: (data: LoginRequest) =>
     apiClient.post<AuthResponse>('/auth/login', data),
+
+  yandexAuth: (data: YandexAuthRequest) =>
+    apiClient.post<AuthResponse>('/auth/yandex', data),
 
   verifyEmail: (token: string) =>
     apiClient.get<AuthResponse>(`/auth/verify-email?token=${encodeURIComponent(token)}`),

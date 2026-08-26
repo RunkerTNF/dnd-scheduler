@@ -4,6 +4,7 @@ import RegisterPage from './pages/auth/RegisterPage';
 import VerifyEmailPage from './pages/auth/VerifyEmailPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import YandexCallbackPage from './pages/auth/YandexCallbackPage';
 import JoinPage from './pages/JoinPage';
 import GroupsListPage from './pages/groups/GroupsListPage';
 import GroupDetailPage from './pages/groups/GroupDetailPage';
@@ -31,6 +32,10 @@ export const router = createBrowserRouter([
   {
     path: '/reset-password',
     element: <ResetPasswordPage />,
+  },
+  {
+    path: '/auth/yandex/callback',
+    element: <YandexCallbackPage />,
   },
   {
     path: '/join/:token',
