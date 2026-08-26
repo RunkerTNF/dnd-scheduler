@@ -28,6 +28,7 @@ class User(Base):
     memberships: Mapped[list["Membership"]] = relationship(back_populates="user")
     groupsOwned: Mapped[list["Group"]] = relationship(back_populates="owner", foreign_keys="Group.ownerId")
     verificationTokens: Mapped[list["EmailVerificationToken"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    passwordResetTokens: Mapped[list["PasswordResetToken"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class Group(Base):
@@ -124,3 +125,16 @@ class EmailVerificationToken(Base):
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     user: Mapped[User] = relationship(back_populates="verificationTokens")
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "PasswordResetToken"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
+    userId: Mapped[str] = mapped_column(String, ForeignKey("User.id", ondelete="CASCADE"), nullable=False)
+    token: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
+    expiresAt: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    usedAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user: Mapped[User] = relationship(back_populates="passwordResetTokens")
