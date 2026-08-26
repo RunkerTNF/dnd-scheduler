@@ -20,6 +20,12 @@ from app.auth import (
 from app.config import Settings, get_settings
 from app.database import get_db
 from app.email import send_password_reset_email, send_verification_email
+from app.yandex import (
+    avatar_url,
+    display_name,
+    exchange_code_for_token,
+    fetch_user_info,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -94,6 +100,38 @@ def login_for_swagger(
 
     token = create_access_token(user=user, settings=settings)
     return schemas.OAuth2TokenSchema(access_token=token, token_type="bearer")
+
+
+@router.post("/yandex", response_model=schemas.AuthResponseSchema)
+def login_with_yandex(
+    payload: schemas.YandexAuthRequestSchema,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> schemas.AuthResponseSchema:
+    access_token = exchange_code_for_token(payload.code, settings)
+    info = fetch_user_info(access_token)
+
+    email = info.get("default_email")
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="yandex_email_missing",
+        )
+
+    user = db.query(models.User).filter(models.User.email == email).one_or_none()
+    if user is None:
+        user = models.User(
+            email=email,
+            name=display_name(info),
+            image=avatar_url(info),
+            emailVerified=datetime.now(timezone.utc),
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    token = create_access_token(user=user, settings=settings)
+    return schemas.AuthResponseSchema(accessToken=token, tokenType="bearer", user=user)
 
 
 @router.get("/verify-email", response_model=schemas.AuthResponseSchema)

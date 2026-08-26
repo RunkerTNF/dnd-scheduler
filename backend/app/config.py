@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["*"]
     secret_key: str = "change-me"
     algorithm: str = "HS256"
+    yandex_client_id: str | None = None
+    yandex_client_secret: str | None = None
     access_token_expire_minutes: int = 60 * 24
     resend_api_key: str = ""
     frontend_url: str = "http://localhost:5173"

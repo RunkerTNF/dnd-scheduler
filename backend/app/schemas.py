@@ -141,6 +141,10 @@ class ResetPasswordSchema(BaseModel):
     password: str = Field(min_length=8)
 
 
+class YandexAuthRequestSchema(BaseModel):
+    code: str = Field(min_length=1)
+
+
 class TokenSchema(BaseModel):
     accessToken: str
     tokenType: str = "bearer"
