@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authApi } from '../../api/auth';
 import { useAuthStore } from '../../store/authStore';
 import Input from '../ui/Input';
@@ -105,6 +105,15 @@ export default function LoginForm() {
         error={errors.password?.message}
         {...register('password')}
       />
+
+      <div className="text-right">
+        <Link
+          to="/forgot-password"
+          className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+        >
+          Забыли пароль?
+        </Link>
+      </div>
 
       <Button
         type="submit"

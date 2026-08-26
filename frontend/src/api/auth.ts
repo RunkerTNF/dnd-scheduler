@@ -3,6 +3,8 @@ import type {
   LoginRequest,
   RegisterRequest,
   RegisterResponse,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
   AuthResponse,
 } from '../types/api';
 
@@ -18,6 +20,12 @@ export const authApi = {
 
   resendVerification: (email: string) =>
     apiClient.post<RegisterResponse>('/auth/resend-verification', { email }),
+
+  forgotPassword: (data: ForgotPasswordRequest) =>
+    apiClient.post<RegisterResponse>('/auth/forgot-password', data),
+
+  resetPassword: (data: ResetPasswordRequest) =>
+    apiClient.post<AuthResponse>('/auth/reset-password', data),
 
   logout: () => apiClient.post('/auth/logout'),
 };
