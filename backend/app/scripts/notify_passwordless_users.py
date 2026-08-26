@@ -61,11 +61,20 @@ def run(
 
         try:
             token_value = issue_setup_token(db, user)
+        except Exception as exc:
+            # Сессия могла остаться в битом состоянии — иначе упадут и остальные
+            db.rollback()
+            stats["failed"] += 1
+            print(f"[failed] {user.email}: {exc}")
+            continue
+
+        try:
             send_password_setup_email(user.email, token_value, settings)
             stats["sent"] += 1
             print(f"[sent] {user.email}")
         except Exception as exc:  # одна упавшая отправка не должна ронять прогон
-            db.rollback()
+            # Токен уже записан и останется в базе: письмо просто не ушло,
+            # повторный прогон перевыпустит его
             stats["failed"] += 1
             print(f"[failed] {user.email}: {exc}")
 

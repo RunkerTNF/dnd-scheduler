@@ -52,6 +52,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES=1440
 CORS_ORIGINS=["http://scheduler.runker.ru"]
 
 # Яндекс ID
+# ClientID нужен и здесь: бэкенд обменивает код на токен и шлёт оба значения
+YANDEX_CLIENT_ID=your-yandex-client-id
 # Client secret используется только бэкендом, наружу не уходит
 YANDEX_CLIENT_SECRET=your-yandex-client-secret
 

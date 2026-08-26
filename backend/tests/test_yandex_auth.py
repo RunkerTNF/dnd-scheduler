@@ -105,6 +105,35 @@ class TestYandexAuth:
         assert response.json()["user"]["name"] == "Старое имя"
         assert db.query(models.User).count() == 1
 
+    def test_confirms_email_of_existing_unverified_user(
+        self, client: TestClient, db: Session, yandex_stub: dict[str, Any]
+    ):
+        """Яндекс доказал владение адресом — аккаунт не должен остаться неподтверждённым."""
+        existing = models.User(
+            email="vasya@yandex.ru",
+            name="Вася",
+            passwordHash=get_password_hash("somepassword123"),
+            emailVerified=None,
+        )
+        db.add(existing)
+        db.commit()
+
+        response = client.post("/api/auth/yandex", json={"code": "auth-code"})
+
+        assert response.status_code == 200
+
+        db.expire_all()
+        refreshed = db.query(models.User).filter(
+            models.User.email == "vasya@yandex.ru"
+        ).one()
+        assert refreshed.emailVerified is not None
+
+        login = client.post(
+            "/api/auth/login",
+            json={"email": "vasya@yandex.ru", "password": "somepassword123"},
+        )
+        assert login.status_code == 200
+
     def test_avatar_skipped_when_empty(
         self, client: TestClient, db: Session, yandex_stub: dict[str, Any]
     ):

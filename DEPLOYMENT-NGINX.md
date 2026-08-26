@@ -78,7 +78,8 @@ CORS_ORIGINS=["http://scheduler.runker.ru"]
 # JWT токен - время жизни
 ACCESS_TOKEN_EXPIRE_MINUTES=1440
 
-# Яндекс ID (client secret нужен бэкенду для обмена кода на токен)
+# Яндекс ID — бэкенду нужны оба значения, он меняет код на токен
+YANDEX_CLIENT_ID=your-yandex-client-id
 YANDEX_CLIENT_SECRET=your-yandex-client-secret
 
 # PostgreSQL (для dev/локальной БД, если нужно)
@@ -101,7 +102,8 @@ nano .docker/.env
 **Содержимое:**
 
 ```env
-# ClientID уезжает в сборку фронта как VITE_YANDEX_CLIENT_ID
+# То же значение, что и в корневом .env: отсюда оно уезжает в сборку фронта
+# как VITE_YANDEX_CLIENT_ID
 YANDEX_CLIENT_ID=your-yandex-client-id
 ```
 
@@ -245,8 +247,11 @@ docker compose restart backend
 
 ### Проблема: вход через Яндекс ID не работает
 
-1. Проверьте `.docker/.env` - должен быть `YANDEX_CLIENT_ID`, а в корневом
-   `.env` - `YANDEX_CLIENT_SECRET`
+1. Проверьте переменные: в корневом `.env` нужны **оба** значения -
+   `YANDEX_CLIENT_ID` и `YANDEX_CLIENT_SECRET` (их читает бэкенд), а в
+   `.docker/.env` - `YANDEX_CLIENT_ID` (его подставляет compose в сборку фронта).
+   Если бэкенд отвечает `yandex_auth_not_configured`, не хватает как раз
+   корневых
 2. В кабинете https://oauth.yandex.ru в разделе **Платформы - Веб-сервисы**
    в Redirect URI должен быть `https://scheduler.runker.ru/auth/yandex/callback`
 3. В правах приложения должны стоять `login:email`, `login:info`, `login:avatar`

@@ -23,7 +23,7 @@ apiClient.interceptors.request.use(
 );
 
 // Запросы, где 401 означает «не тот пароль / плохой код», а не «сессия протухла»
-const AUTH_ATTEMPT_PATHS = ['/auth/login', '/auth/token', '/auth/yandex', '/auth/reset-password'];
+const AUTH_ATTEMPT_PATHS = ['/auth/login', '/auth/token', '/auth/yandex'];
 
 // Response interceptor: Handle 401 errors
 apiClient.interceptors.response.use(

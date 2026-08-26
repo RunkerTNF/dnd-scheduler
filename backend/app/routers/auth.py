@@ -129,6 +129,12 @@ def login_with_yandex(
         db.add(user)
         db.commit()
         db.refresh(user)
+    elif user.emailVerified is None:
+        # Яндекс только что подтвердил владение адресом, а вход по паролю
+        # неподтверждённых не пускает — не оставляем аккаунт в этом состоянии
+        user.emailVerified = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(user)
 
     token = create_access_token(user=user, settings=settings)
     return schemas.AuthResponseSchema(accessToken=token, tokenType="bearer", user=user)
