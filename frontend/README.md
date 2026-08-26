@@ -17,7 +17,7 @@ npm run lint       # Линтинг
 
 ```env
 VITE_API_BASE_URL=http://localhost:8000
-VITE_GOOGLE_CLIENT_ID=<client_id>
+VITE_YANDEX_CLIENT_ID=<client_id>
 ```
 
 ## Docker

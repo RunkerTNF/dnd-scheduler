@@ -29,7 +29,8 @@ docker compose -f docker-compose.prod.yml logs -f
 ### 1. `.docker/.env`
 
 ```env
-GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+# ClientID публичный, попадает в сборку фронта
+YANDEX_CLIENT_ID=your-yandex-client-id
 ```
 
 ### 2. `../.env` (корень проекта)
@@ -50,8 +51,9 @@ ACCESS_TOKEN_EXPIRE_MINUTES=1440
 # CORS
 CORS_ORIGINS=["http://scheduler.runker.ru"]
 
-# Google OAuth
-GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+# Яндекс ID
+# Client secret используется только бэкендом, наружу не уходит
+YANDEX_CLIENT_SECRET=your-yandex-client-secret
 
 # Бэкапы (опционально)
 BACKUP_INTERVAL=86400  # 24 часа

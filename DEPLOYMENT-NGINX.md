@@ -78,8 +78,8 @@ CORS_ORIGINS=["http://scheduler.runker.ru"]
 # JWT токен - время жизни
 ACCESS_TOKEN_EXPIRE_MINUTES=1440
 
-# Google OAuth
-GOOGLE_CLIENT_ID=687642829824-dng38rnpks9q2pr3tecfb30e2lku0f2b.apps.googleusercontent.com
+# Яндекс ID (client secret нужен бэкенду для обмена кода на токен)
+YANDEX_CLIENT_SECRET=your-yandex-client-secret
 
 # PostgreSQL (для dev/локальной БД, если нужно)
 POSTGRES_USER=app
@@ -101,7 +101,8 @@ nano .docker/.env
 **Содержимое:**
 
 ```env
-GOOGLE_CLIENT_ID=687642829824-dng38rnpks9q2pr3tecfb30e2lku0f2b.apps.googleusercontent.com
+# ClientID уезжает в сборку фронта как VITE_YANDEX_CLIENT_ID
+YANDEX_CLIENT_ID=your-yandex-client-id
 ```
 
 ---
@@ -242,11 +243,17 @@ CORS_ORIGINS=["http://scheduler.runker.ru"]
 docker compose restart backend
 ```
 
-### Проблема: Google OAuth не работает
+### Проблема: вход через Яндекс ID не работает
 
-1. Проверьте `.docker/.env` - должен быть `GOOGLE_CLIENT_ID`
-2. В Google Cloud Console добавьте в **Authorized JavaScript origins**:
-   - `http://scheduler.runker.ru`
+1. Проверьте `.docker/.env` - должен быть `YANDEX_CLIENT_ID`, а в корневом
+   `.env` - `YANDEX_CLIENT_SECRET`
+2. В кабинете https://oauth.yandex.ru в разделе **Платформы - Веб-сервисы**
+   в Redirect URI должен быть `https://scheduler.runker.ru/auth/yandex/callback`
+3. В правах приложения должны стоять `login:email`, `login:info`, `login:avatar`
+4. Client id вшивается на этапе сборки фронта - после его смены нужен пересбор
+   образа, а не только перезапуск контейнера
+5. Если кнопка «Войти с Яндекс ID» вообще не видна на странице входа, значит
+   `VITE_YANDEX_CLIENT_ID` приехал в сборку пустым
 
 ---
 

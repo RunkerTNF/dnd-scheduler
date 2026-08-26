@@ -4,7 +4,7 @@
 
 ## Возможности
 
-- Регистрация / авторизация (email + Google OAuth)
+- Регистрация / авторизация (email + Яндекс ID)
 - Создание групп и приглашение игроков по ссылке
 - Календарь с отметками доступности (клик / драг по дням)
 - Автоматический подбор дат (пересечение расписаний участников)
@@ -74,7 +74,8 @@ dnd_scheduler/
    CORS_ORIGINS=["http://localhost:3000","http://localhost:5173"]
    SECRET_KEY="<случайная_строка>"   # openssl rand -hex 32
    ACCESS_TOKEN_EXPIRE_MINUTES=1440
-   GOOGLE_CLIENT_ID="<client_id>"    # опционально
+   YANDEX_CLIENT_ID="<client_id>"
+   YANDEX_CLIENT_SECRET="<client_secret>"
 
    # pgAdmin (опционально)
    PGADMIN_EMAIL=admin@example.com
@@ -136,7 +137,7 @@ dnd_scheduler/
 4. Создайте `frontend/.env`:
    ```env
    VITE_API_BASE_URL=http://localhost:8000
-   VITE_GOOGLE_CLIENT_ID=<client_id>
+   VITE_YANDEX_CLIENT_ID=<client_id>
    ```
 
 5. Создайте `.env` в корне:
@@ -145,7 +146,8 @@ dnd_scheduler/
    CORS_ORIGINS=["http://localhost:5173","http://localhost:3000"]
    SECRET_KEY="<случайная_строка>"
    ACCESS_TOKEN_EXPIRE_MINUTES=1440
-   GOOGLE_CLIENT_ID="<client_id>"
+   YANDEX_CLIENT_ID="<client_id>"
+   YANDEX_CLIENT_SECRET="<client_secret>"
    ```
 
 6. Откройте `http://localhost:5173`
@@ -157,7 +159,9 @@ dnd_scheduler/
 |-------|------|----------|
 | POST | `/auth/register` | Регистрация |
 | POST | `/auth/login` | Вход |
-| POST | `/auth/google` | Google OAuth |
+| POST | `/auth/yandex` | Вход через Яндекс ID |
+| POST | `/auth/forgot-password` | Запрос ссылки на установку пароля |
+| POST | `/auth/reset-password` | Установка нового пароля по токену |
 | POST | `/auth/logout` | Выход |
 
 ### Users
